@@ -49,6 +49,6 @@ df = df.applymap(lambda x: x.replace("+@V_DRIVER_PERIOD","").replace("+_HIS","")
 df = df.applymap(lambda x: x.replace("+@BATCH_NUMBER+","").replace(",U","")) #ETL4
 df = df.drop_duplicates()
 
-df.to_csv("/home/user/python-project/File/Output/output.csv", index=False)
+#df.to_csv("/home/user/python-project/File/Output/output.csv", index=False)
 
 print(tabulate(df, headers='keys', tablefmt='psql'))
