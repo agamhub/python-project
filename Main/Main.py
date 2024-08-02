@@ -5,13 +5,13 @@ from tabulate import tabulate
 directory = "/home/user/python-project/File/SP"
 files = os.listdir(directory)
 dict_list = []
-hardcoded_file_name = ["USP_LOAD_ABST_ACTUAL_CF_TRAN.sql","USP_LOAD_ABST_ALLOC_DRIVER_CONFIG.sql"] #get desired file name
+#hardcoded_file_name = ["USP_LOAD_ETL4_LIFEASIA_PARALLEL_FOND2.sql"] #get desired file name
 
 for file in files: #filter an array or objects using files[:1]
-    if file in hardcoded_file_name: # remove if if not used anymore
+ #  if file in hardcoded_file_name: # remove if if not used anymore
         with open(os.path.join(directory, file), "r") as f:
             contents = f.read()
-            #print(file)
+            #print(contents)
             table_name = []
             file_dict = {"SpName": file, "TableName":""}
             dict_list.append(file_dict)
@@ -30,7 +30,7 @@ for file in files: #filter an array or objects using files[:1]
                                             table_name.append(p1[:p1.find("(")])
                                             file_dict["TableName"] = table_name
                                         else:
-                                            print("step2 = "+p1)
+                                            #print("step2 = "+p1)
                                             table_name.append(p1)
                                             file_dict["TableName"] = table_name
                                 else:
@@ -42,5 +42,13 @@ for file in files: #filter an array or objects using files[:1]
                                             else:
                                                 table_name.append(line_fix)
                                                 file_dict["TableName"] = table_name
+
 df = pd.DataFrame(dict_list).explode('TableName')
+df = df.applymap(lambda x: x.replace(")","").replace("_'","").replace("'',","").replace("'","").replace(":",""))
+df = df.applymap(lambda x: x.replace("+@V_DRIVER_PERIOD","").replace("+_HIS","")) #ETL5
+df = df.applymap(lambda x: x.replace("+@BATCH_NUMBER+","").replace(",U","")) #ETL4
+df = df.drop_duplicates()
+
+df.to_csv("/home/user/python-project/File/Output/output.csv", index=False)
+
 print(tabulate(df, headers='keys', tablefmt='psql'))

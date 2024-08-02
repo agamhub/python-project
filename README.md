@@ -1,3 +1,9 @@
 Get started by customizing your environment (defined in the .idx/dev.nix file) with the tools and IDE extensions you'll need for your project!
 
 Learn more at https://developers.google.com/idx/guides/customize-idx-env
+
+### Environment Setup
+> ctrl + shift + p to open command palette
+> create python env either venv conv
+> install pip
+> python jupyter
