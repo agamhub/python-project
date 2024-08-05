@@ -9,6 +9,8 @@
     pkgs.python311
     pkgs.python311Packages.pip
     pkgs.graphicsmagick-imagemagick-compat
+    pkgs.sudo
+    pkgs.doas
     # pkgs.nodejs_20
     # pkgs.nodePackages.nodemon
   ];
