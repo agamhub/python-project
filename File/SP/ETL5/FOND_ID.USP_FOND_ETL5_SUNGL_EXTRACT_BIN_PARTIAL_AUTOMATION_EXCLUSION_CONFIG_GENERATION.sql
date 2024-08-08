@@ -1,0 +1,809 @@
+CREATE PROC [FOND_ID].[USP_FOND_ETL5_SUNGL_EXTRACT_BIN_PARTIAL_AUTOMATION_EXCLUSION_CONFIG_GENERATION] @BATCH [nvarchar](20),@JOBNAMESTR [NVARCHAR](2000) AS
+
+BEGIN TRY
+
+--SET @BATCH = CAST(DATEADD(MONTH,1,CONVERT(DATE, CAST(@BATCH AS VARCHAR))) AS DATE);
+
+DECLARE
+@PERIOD				VARCHAR(20) = datepart(year, @BATCH) * 100 + datepart(month, @BATCH);
+
+DECLARE
+--@JOBNAMESTR			VARCHAR(2000) = 'FOND_ID.USP_FOND_ETL5_SUNGL_EXTRACT_BIN_GENERATE_EXCL_CONFIG_AUTOMATION',
+@V_START			datetime,
+@V_END				datetime,
+@V_DURATION			datetime,
+@V_FUNCTION_NAME	varchar(100),
+@V_DESCRIPTION		varchar(500),
+@V_PARAM			nvarchar(4000),
+@V_SEQNO			integer,
+@V_CREATED_DATE		DATETIME,
+@V_START_DATE		DATE,
+@V_END_DATE			DATE,
+@IFRS17_YEAR		INTEGER = CAST(SUBSTRING (CAST (@PERIOD AS VARCHAR) ,1,4) AS INT),
+@IFRS17_MONTH		INTEGER = CAST(SUBSTRING (CAST (@PERIOD AS VARCHAR) ,5,2) AS INT),
+@BATCH_NUMBER		VARCHAR(5),
+@PRD_ID 			VARCHAR(8),
+@PREVIOUS_PERIOD 	VARCHAR(20),
+
+------START GET RUN ID DETAIL FROM ABC------
+@BATCH_MASTER_ID    VARCHAR(20) = 0,
+@BATCH_RUN_ID       VARCHAR(20) = 0,
+@JOB_MASTER_ID      VARCHAR(20) = 0,
+@JOB_RUN_ID         VARCHAR(20) = 0,
+@GMT_START_DTTM     VARCHAR(20) = CONVERT(DATETIME2, GETDATE()),
+@BATCHDATE			 VARCHAR(20) = LEFT(@PERIOD,6);
+
+EXEC STAG_ID.USP_GetRunIdReturn
+  @JobName        = @JOBNAMESTR,
+  @BATCH_MASTER_ID = @BATCH_MASTER_ID OUTPUT,
+  @BATCH_RUN_ID    = @BATCH_RUN_ID OUTPUT,
+  @JOB_MASTER_ID   = @JOB_MASTER_ID OUTPUT,
+  @JOB_RUN_ID      = @JOB_RUN_ID OUTPUT,
+  @GMT_START_DTTM  = @GMT_START_DTTM OUTPUT;
+  
+SET @V_FUNCTION_NAME	= 'FOND_ID.USP_FOND_ETL5_SUNGL_EXTRACT_BIN_PARTIAL_AUTOMATION_EXCLUSION_CONFIG_GENERATION';
+SET @V_SEQNO			= 0;
+
+PRINT '@BATCHDATE='+@BATCHDATE;
+PRINT '@IFRS17_YEAR='+CONVERT(VARCHAR(20),@IFRS17_YEAR);
+PRINT '@IFRS17_MONTH='+CONVERT(VARCHAR(20),@IFRS17_MONTH); 
+
+---------------------------------------------------------------
+-- STEP 0A: PREPARE THE TEMP TABLE
+---------------------------------------------------------------
+
+IF OBJECT_ID(N'tempdb..#TEMP_FOND_PLAI_FOND_ETL5_SUNGL_EXCLUDED_EXCLUSION',N'U') IS NOT NULL DROP TABLE #TEMP_FOND_PLAI_FOND_ETL5_SUNGL_EXCLUDED_EXCLUSION;
+IF OBJECT_ID(N'tempdb..#TEMP_FOND_ETL5_SUNGL_EXTRACT',N'U') IS NOT NULL DROP TABLE #TEMP_FOND_ETL5_SUNGL_EXTRACT;
+EXEC('SELECT * INTO #TEMP_FOND_PLAI_FOND_ETL5_SUNGL_EXCLUDED_EXCLUSION FROM FOND_ID.FOND_PLAI_FOND_ETL5_SUNGL_EXCLUDED_EXCLUSION WHERE ENTITY_ID = ''IAI'' AND BATCHDATE = '+@PERIOD);
+EXEC('SELECT * INTO #TEMP_FOND_ETL5_SUNGL_EXTRACT FROM FOND_ID.FOND_ETL5_SUNGL_EXTRACT WHERE ENTITY_ID = ''IAI'' AND BATCHDATE = '+@PERIOD);
+
+---------------------------------------------------------------
+-- STEP 0B: PROC LOG
+---------------------------------------------------------------
+
+SET @V_START = current_timestamp;
+SET @V_SEQNO = @V_SEQNO + 1;
+SET @V_DESCRIPTION = 'INSERTING TO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED ' + convert(varchar(20),current_timestamp);
+PRINT @V_DESCRIPTION;
+
+INSERT INTO STAG_ID.STAG_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+VALUES(@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+
+---------------------------------------------------------------
+-- STEP 0C: CLEAN-UP THE TABLES
+---------------------------------------------------------------
+
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP1',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP1;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP2',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP2;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP3',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP3;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP4',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP4;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP5',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP5;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP6',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP6;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP7',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP7;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP8',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP8;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP9',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP9;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP10',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP10;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP11',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP11;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP12',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP12;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP13',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP13;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP14',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP14;
+IF OBJECT_ID(N'FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP15',N'U') IS NOT NULL DROP TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP15;
+
+---------------------------------------------------------------
+-- STEP 1: FILTEROUT_BY_CONFIG
+---------------------------------------------------------------
+
+WITH CONFIG_KEYWORDS AS (
+  SELECT 
+    FILTER_STEP, 
+    COLS, 
+    VALUE 
+  FROM 
+    [STAG_ID].[STAG_CONFIG_ETL5_SUNGL_PARTIAL_AUTOMATION] 
+  WHERE 
+    TYPE = 'EXCL'
+), 
+CONFIG_KEYWORDS_FILTER_STEP_2 AS (
+  SELECT 
+    COLS, 
+    VALUE 
+  FROM 
+    CONFIG_KEYWORDS 
+  WHERE 
+    FILTER_STEP = 2
+), 
+IMBALANCE_JRNAL_NO AS (
+  SELECT 
+    JRNAL_NO 
+  FROM 
+    (
+      SELECT 
+        JRNAL_NO, 
+        SUM(
+          CAST(
+            AMOUNT AS NUMERIC(28, 6)
+          )
+        ) SUM_AMOUNT 
+      FROM 
+        #TEMP_FOND_PLAI_FOND_ETL5_SUNGL_EXCLUDED_EXCLUSION WHERE CONCAT(LEFT(PERIOD,4), RIGHT(PERIOD,2)) = @PERIOD GROUP BY JRNAL_NO) A
+      WHERE 
+        (
+          SUM_AMOUNT > 0 
+          OR SUM_AMOUNT < 0
+        ) 
+        AND ABS(SUM_AMOUNT) > (
+          SELECT 
+            VALUE 
+          FROM 
+            CONFIG_KEYWORDS 
+          WHERE 
+            FILTER_STEP = 1 
+            AND COLS = 'SUM_AMOUNT'
+        )
+    ), 
+    FILTEROUT_BY_CONFIG AS (
+      SELECT 
+        * 
+      FROM 
+        (
+          SELECT 
+            ACCNT_CODE, 
+            AMOUNT, 
+            JRNAL_NO, 
+            JRNAL_LINE, 
+            SUM(FLAG) SUM_FLAG 
+          FROM 
+            (
+              SELECT 
+                *, 
+                CASE WHEN (
+                  COLS = 'TREFERENCE' 
+                  AND UPPER(TREFERENCE) LIKE '%' + UPPER(VALUE) + '%'
+                ) 
+                OR (
+                  COLS = 'DESCRIPTN' 
+                  AND UPPER(DESCRIPTN) LIKE '%' + UPPER(VALUE) + '%'
+                ) THEN 1 END FLAG 
+              FROM 
+                #TEMP_FOND_PLAI_FOND_ETL5_SUNGL_EXCLUDED_EXCLUSION
+                CROSS 
+                JOIN CONFIG_KEYWORDS_FILTER_STEP_2 
+              WHERE 
+                JRNAL_NO IN (
+                  SELECT 
+                    JRNAL_NO 
+                  FROM 
+                    IMBALANCE_JRNAL_NO
+                )
+            ) A 
+          GROUP BY 
+            ACCNT_CODE, 
+            AMOUNT, 
+            JRNAL_NO, 
+            JRNAL_LINE
+        ) A 
+      WHERE 
+        SUM_FLAG IS NULL
+)
+	SELECT 
+    * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP1 
+  FROM 
+    FILTEROUT_BY_CONFIG;
+
+---------------------------------------------------------------
+-- STEP 2: MATERIAL_ACCT_CD
+---------------------------------------------------------------	
+
+	WITH SUM_BY_ACCT_CD AS (
+      SELECT 
+        ACCNT_CODE, 
+        SUM(
+          CAST(
+            AMOUNT AS NUMERIC(28, 6)
+          )
+        ) SUM_AMOUNT 
+      FROM 
+        FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP1  
+      GROUP BY 
+        ACCNT_CODE
+    ), 
+    MATERIAL_ACCT_CD AS (
+      SELECT 
+        * 
+      FROM 
+        SUM_BY_ACCT_CD 
+      WHERE 
+        ABS(SUM_AMOUNT) > 1000
+    )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP2 
+FROM 
+  MATERIAL_ACCT_CD;
+
+---------------------------------------------------------------
+-- STEP 3: JRNAL_NO_TO_BE_FIXED
+---------------------------------------------------------------
+
+    WITH JRNAL_NO_TO_BE_FIXED AS (
+      SELECT 
+        DISTINCT JRNAL_NO 
+      FROM 
+        FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP1 
+      WHERE 
+        ACCNT_CODE IN (
+          SELECT 
+            ACCNT_CODE 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP2 
+        )
+    )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP3 
+FROM 
+  JRNAL_NO_TO_BE_FIXED;
+
+---------------------------------------------------------------
+-- STEP 4: SIMPLE_BIN
+---------------------------------------------------------------
+	 
+    WITH EXCL_WITH_JRNAL_NO_TO_BE_FIXED AS (
+      SELECT 
+        * 
+      FROM 
+        FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP1 
+      WHERE 
+        ACCNT_CODE IN (
+          SELECT 
+            ACCNT_CODE 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP2
+        )
+    ),
+	SIMPLE_EXCL AS (
+          SELECT 
+            'EXCL' AS FLAG, 
+            ACCNT_CODE, 
+            AMOUNT, 
+            JRNAL_NO, 
+            JRNAL_LINE, 
+            NULL AS TREFERENCE, 
+            NULL AS DESCRIPTN 
+          FROM 
+            EXCL_WITH_JRNAL_NO_TO_BE_FIXED
+        ), 
+        SIMPLE_EXCL_AGG AS (
+          SELECT 
+            MAX(FLAG) AS FLAG, 
+            SUM(
+              CAST(
+                AMOUNT AS NUMERIC(28, 6)
+              )
+            ) AMOUNT, 
+            MAX(JRNAL_NO) AS JRNAL_NO, 
+            MIN(JRNAL_LINE) JRNAL_LINE_MIN, 
+            MAX(JRNAL_LINE) JRNAL_LINE_MAX 
+          FROM 
+            SIMPLE_EXCL 
+          GROUP BY 
+            JRNAL_NO
+        )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP4 
+FROM 
+  SIMPLE_EXCL_AGG;
+
+---------------------------------------------------------------
+-- STEP 5: SIMPLE_EXTRACT
+---------------------------------------------------------------
+
+    WITH EXTRACT_WITH_JRNAL_NO_TO_BE_FIXED AS (
+      SELECT 
+        * 
+      FROM 
+        #TEMP_FOND_ETL5_SUNGL_EXTRACT WHERE JRNAL_NO IN (SELECT JRNAL_NO FROM FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP3)), 
+        SIMPLE_EXTRACT AS (
+          SELECT 
+            'EXTRACT' AS FLAG, 
+            ACCT_CD, 
+            AMT_LOCAL_CCY, 
+            JRNAL_NO, 
+            JRNAL_LINE, 
+            TXN_REF, 
+            TXN_DESC 
+          FROM 
+            EXTRACT_WITH_JRNAL_NO_TO_BE_FIXED
+        )
+  SELECT 
+    * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP5 
+  FROM 
+    SIMPLE_EXTRACT;
+
+---------------------------------------------------------------
+-- STEP 6: UNION_EXCL_AND_EXTRACT
+---------------------------------------------------------------
+WITH UNION_EXCL_AND_EXTRACT AS (
+  SELECT 
+    FLAG, 
+    AMOUNT, 
+    JRNAL_NO, 
+    JRNAL_LINE_MAX JRNAL_LINE 
+  FROM 
+    FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP4 
+  UNION ALL 
+  SELECT 
+    FLAG, 
+    AMT_LOCAL_CCY, 
+    JRNAL_NO, 
+    JRNAL_LINE 
+  FROM 
+    FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP5
+) 
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP6 
+FROM 
+  UNION_EXCL_AND_EXTRACT;
+
+---------------------------------------------------------------
+-- STEP 7: EXCL_JRNAL_LINE_RANGES
+---------------------------------------------------------------
+
+        WITH EXCL_JRNAL_LINE_RANGES AS (
+          SELECT 
+            JRNAL_NO, 
+            JRNAL_LINE_MIN - 2 JRNAL_LINE_RANGES 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP4 
+          WHERE 
+            FLAG = 'EXCL' 
+          UNION ALL 
+          SELECT 
+            JRNAL_NO, 
+            JRNAL_LINE_MIN - 1 JRNAL_LINE_RANGES 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP4 
+          WHERE 
+            FLAG = 'EXCL' 
+          UNION ALL 
+          SELECT 
+            JRNAL_NO, 
+            JRNAL_LINE_MAX + 1 JRNAL_LINE_RANGES 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP4 
+          WHERE 
+            FLAG = 'EXCL' 
+          UNION ALL 
+          SELECT 
+            JRNAL_NO, 
+            JRNAL_LINE_MAX + 2 JRNAL_LINE_RANGES 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP4 
+          WHERE 
+            FLAG = 'EXCL'
+        )	
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP7 
+FROM 
+  EXCL_JRNAL_LINE_RANGES;
+
+---------------------------------------------------------------
+-- STEP 8: SINGLE_COMPARER
+--------------------------------------------------------------- 
+
+        WITH SINGLE_COMPARER AS (
+          SELECT 
+            A.JRNAL_NO, 
+            A.AMT_LOCAL_CCY, 
+            A.JRNAL_LINE 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP5 A 
+            INNER JOIN FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP7 B ON A.JRNAL_NO = B.JRNAL_NO 
+            AND A.JRNAL_LINE = B.JRNAL_LINE_RANGES
+        )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP8 
+FROM 
+  SINGLE_COMPARER;
+
+---------------------------------------------------------------
+-- STEP 9: MULTIPLE_COMPARER
+---------------------------------------------------------------
+		
+        WITH MULTIPLE_COMPARER AS (
+          SELECT 
+            JRNAL_NO, 
+            AMT_LOCAL_CCY_SUM AS AMT_LOCAL_CCY, 
+            JRNAL_LINE_SUM AS JRNAL_LINE 
+          FROM 
+            (
+              SELECT 
+                *, 
+                AMT_LOCAL_CCY + AMT_LOCAL_CCY_NEXT AS AMT_LOCAL_CCY_SUM, 
+                CONCAT(JRNAL_LINE, ',', JRNAL_LINE_NEXT) AS JRNAL_LINE_SUM 
+              FROM 
+                (
+                  SELECT 
+                    *, 
+                    LEAD(AMT_LOCAL_CCY, 1) OVER (
+                      PARTITION BY JRNAL_NO 
+                      ORDER BY 
+                        JRNAL_LINE
+                    ) AS AMT_LOCAL_CCY_NEXT, 
+                    LEAD(JRNAL_LINE, 1) OVER (
+                      PARTITION BY JRNAL_NO 
+                      ORDER BY 
+                        JRNAL_LINE
+                    ) AS JRNAL_LINE_NEXT 
+                  FROM 
+                    FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP8
+                ) A
+            ) A
+        )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP9 
+FROM 
+  MULTIPLE_COMPARER;
+
+---------------------------------------------------------------
+-- STEP 10: COMPARE_AMOUNT
+---------------------------------------------------------------
+		 
+        WITH COMPARE_AMOUNT AS (
+          SELECT 
+            JRNAL_NO, 
+            value AS JRNAL_LINE 
+          FROM 
+            (
+              SELECT 
+                * 
+              FROM 
+                (
+                  SELECT 
+                    A.*, 
+                    B.JRNAL_LINE JRNAL_LINE_MATCH 
+                  FROM 
+                    FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP4 A 
+                    LEFT JOIN (
+                      SELECT 
+                        * 
+                      FROM 
+                        FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP9 
+                      UNION ALL 
+                      SELECT 
+                        JRNAL_NO, 
+                        AMT_LOCAL_CCY, 
+                        CAST(JRNAL_LINE AS VARCHAR) JRNAL_LINE 
+                      FROM 
+                        FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP8
+                    ) B ON A.JRNAL_NO = B.JRNAL_NO 
+                    AND A.AMOUNT = B.AMT_LOCAL_CCY *-1
+                ) A CROSS APPLY STRING_SPLIT (JRNAL_LINE_MATCH, ',')
+            ) A
+        )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP10 
+FROM 
+  COMPARE_AMOUNT;
+
+---------------------------------------------------------------
+-- STEP 11: TO_BE_EXCLUDED
+---------------------------------------------------------------
+
+		WITH TO_BE_EXCLUDED AS (
+          SELECT 
+            ACCT_CD, 
+            TXN_REF, 
+            TXN_DESC, 
+            SUM(AMT_LOCAL_CCY) AMT_LOCAL_CCY 
+          FROM 
+            (
+              SELECT 
+                A.ACCT_CD, 
+                A.AMT_LOCAL_CCY, 
+                A.JRNAL_NO, 
+                A.JRNAL_LINE, 
+                A.TXN_REF, 
+                A.TXN_DESC 
+              FROM 
+                FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP5 A 
+                INNER JOIN FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP10 B ON A.JRNAL_NO = B.JRNAL_NO 
+                AND A.JRNAL_LINE = B.JRNAL_LINE
+            ) A 
+          GROUP BY 
+            ACCT_CD, 
+            TXN_REF, 
+            TXN_DESC
+        )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP11 
+FROM 
+  TO_BE_EXCLUDED;
+
+---------------------------------------------------------------
+-- STEP 12: CHECK_APPLICABILITY
+---------------------------------------------------------------
+
+        WITH CHECK_APPLICABILITY AS (
+          SELECT 
+            A.ACCT_CD, 
+            A.TXN_REF, 
+            A.TXN_DESC, 
+            A.AMT_LOCAL_CCY, 
+            B.AMT_LOCAL_CCY AMT_LOCAL_CCY_TYPE1, 
+            C.AMT_LOCAL_CCY AMY_LOCAL_CCY_EXTRACT_TYPE2, 
+            CASE WHEN ABS(A.AMT_LOCAL_CCY) < 1000 THEN 1 ELSE 0 END FLAG_MATERIALITY, 
+            CASE WHEN A.AMT_LOCAL_CCY = B.AMT_LOCAL_CCY THEN 1 ELSE 0 END FLAG_CONFIG_BY_ACCT_CD_TXN_DESC, 
+            CASE WHEN A.AMT_LOCAL_CCY = C.AMT_LOCAL_CCY THEN 1 ELSE 0 END FLAG_CONFIG_BY_TXN_REF_TXN_DESC 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP11 A 
+            LEFT JOIN (
+              SELECT 
+                ACCT_CD, 
+                TXN_DESC, 
+                SUM(AMT_LOCAL_CCY) AMT_LOCAL_CCY 
+              FROM 
+                FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP5 
+              GROUP BY 
+                ACCT_CD, 
+                TXN_DESC
+            ) B ON A.ACCT_CD = B.ACCT_CD 
+            AND A.TXN_DESC = B.TXN_DESC 
+            LEFT JOIN (
+              SELECT 
+                TXN_REF, 
+                TXN_DESC, 
+                SUM(AMT_LOCAL_CCY) AMT_LOCAL_CCY 
+              FROM 
+                FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP5 
+              GROUP BY 
+                TXN_REF, 
+                TXN_DESC
+            ) C ON A.TXN_REF = C.TXN_REF 
+            AND A.TXN_DESC = C.TXN_DESC
+        )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP12 
+FROM 
+  CHECK_APPLICABILITY;
+
+---------------------------------------------------------------
+-- STEP 13: EXCL_CONFIG
+---------------------------------------------------------------
+
+        WITH EXCL_CONFIG AS (
+          SELECT 
+            * 
+          FROM 
+            (
+              SELECT 
+                *, 
+                ROW_NUMBER() OVER (
+                  PARTITION BY RULE_ID 
+                  ORDER BY 
+                    EFF_TO_DT DESC
+                ) RN 
+              FROM 
+                FCORE_ID.FOND_EXCLUSION_CONFIG 
+              WHERE 
+                BATCH_TO_DT >= EOMONTH(
+                  DATEADD(
+                    MONTH, 
+                    -1, 
+                    CAST(@BATCH AS DATE)
+                  )
+                ) 
+                AND BATCH_FROM_DT <= EOMONTH(
+                  DATEADD(
+                    MONTH, 
+                    -1, 
+                    CAST(@BATCH AS DATE)
+                  )
+                )
+            ) A 
+          WHERE 
+            RN = 1
+        )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP13 
+FROM 
+  EXCL_CONFIG;
+
+---------------------------------------------------------------
+-- STEP 14: EXCL_CONFIG_EXIST
+---------------------------------------------------------------
+
+		WITH EXCL_CONFIG_EXIST AS (
+          SELECT 
+            1 AS CONFIG_TYPE, 
+            B.ENTITY_ID, 
+            B.RULE_ID, 
+            A.ACCT_CD, 
+            A.TXN_REF, 
+            A.TXN_DESC, 
+            B.EXCL_FIELD1, 
+            B.EXCL_FIELD1_COND, 
+            B.EXCL_FIELD2, 
+            B.EXCL_FIELD2_COND, 
+            B.EXCL_FLG, 
+            CASE WHEN B.EXCL_FLG = 'INCL' THEN 'EXCL' ELSE 'EXCL' END AS EXCL_FLG_NEW, 
+            A.TXN_DESC AS DESCRIPTION, 
+			B.RECONCILIATION_IND,
+            B.USER_PROFILE, 
+            FORMAT(GETDATE(),'yyyyMMdd') AS UPDATE_DATE
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP12 A 
+            LEFT JOIN FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP13 B ON B.EXCL_FIELD1 = 'ACCT_CD' 
+            AND A.ACCT_CD = B.EXCL_FIELD1_COND 
+            AND B.EXCL_FIELD2 = 'TXN_DESC' 
+            AND A.TXN_DESC LIKE B.EXCL_FIELD2_COND 
+          WHERE 
+            FLAG_MATERIALITY = 0 
+            AND FLAG_CONFIG_BY_ACCT_CD_TXN_DESC = 1 
+          UNION ALL 
+          SELECT 
+            2 AS CONFIG_TYPE, 
+            B.ENTITY_ID, 
+            B.RULE_ID, 
+            A.ACCT_CD, 
+            A.TXN_REF, 
+            A.TXN_DESC, 
+            B.EXCL_FIELD1, 
+            B.EXCL_FIELD1_COND, 
+            B.EXCL_FIELD2, 
+            B.EXCL_FIELD2_COND, 
+            B.EXCL_FLG, 
+            CASE WHEN B.EXCL_FLG = 'INCL' THEN 'EXCL' ELSE 'EXCL' END AS EXCL_FLG_NEW, 
+            A.TXN_DESC AS DESCRIPTION, 
+			B.RECONCILIATION_IND,
+            B.USER_PROFILE, 
+            FORMAT(GETDATE(),'yyyyMMdd') AS UPDATE_DATE 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP12 A 
+            LEFT JOIN FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP13 B ON B.EXCL_FIELD1 = 'TXN_REF' 
+            AND A.TXN_REF = B.EXCL_FIELD1_COND 
+            AND B.EXCL_FIELD2 = 'TXN_DESC' 
+            AND A.TXN_DESC LIKE B.EXCL_FIELD2_COND 
+          WHERE 
+            FLAG_MATERIALITY = 0 
+            AND FLAG_CONFIG_BY_ACCT_CD_TXN_DESC = 0 
+            AND FLAG_CONFIG_BY_TXN_REF_TXN_DESC = 1
+        )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP14 
+FROM 
+  EXCL_CONFIG_EXIST;
+
+---------------------------------------------------------------
+-- STEP 15: GENERATED_EXCLUSION_CONFIG
+---------------------------------------------------------------
+		 
+        WITH GENERATED_EXCLUSION_CONFIG AS (
+          SELECT 
+            CASE WHEN ENTITY_ID IS NULL THEN 'IAI' ELSE ENTITY_ID END ENTITY_ID, 
+            CASE WHEN EXCL_FIELD1 IS NULL 
+            AND CONFIG_TYPE = 1 THEN 'ACCT_CD' WHEN EXCL_FIELD1 IS NULL 
+            AND CONFIG_TYPE = 2 THEN 'TXN_REF' ELSE EXCL_FIELD1 END EXCL_FIELD1, 
+            CASE WHEN EXCL_FIELD1_COND IS NULL 
+            AND CONFIG_TYPE = 1 THEN ACCT_CD WHEN EXCL_FIELD1_COND IS NULL 
+            AND CONFIG_TYPE = 2 THEN TXN_REF ELSE EXCL_FIELD1_COND END EXCL_FIELD1_COND, 
+            CASE WHEN EXCL_FIELD2 IS NULL THEN 'TXN_DESC' ELSE EXCL_FIELD2 END EXCL_FIELD2, 
+            CASE WHEN EXCL_FIELD2_COND IS NULL THEN TXN_DESC ELSE EXCL_FIELD2_COND END EXCL_FIELD2_COND, 
+            CASE WHEN EXCL_FLG_NEW IS NULL THEN 'EXCL' ELSE EXCL_FLG_NEW END EXCL_FLG, 
+            DESCRIPTION, 
+            CASE WHEN RULE_ID IS NULL THEN (
+              SELECT 
+                MAX(
+                  CAST(RULE_ID AS INT)
+                ) MAX_RULE_ID 
+              FROM 
+                FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP13  
+              WHERE 
+                RULE_ID IS NOT NULL 
+                AND RULE_ID <> 'IAI'
+            ) ELSE RULE_ID END RULE_ID, 
+            CASE WHEN RULE_ID IS NULL THEN 'I' ELSE 'U' END ACTION, 
+			CASE WHEN RECONCILIATION_IND IS NULL THEN 'N' ELSE RECONCILIATION_IND END RECONCILIATION_IND,
+            CASE WHEN USER_PROFILE IS NULL THEN 'ETL5_PLAI' ELSE USER_PROFILE END USER_PROFILE, 
+            UPDATE_DATE 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP14 
+          WHERE 
+            (EXCL_FLG != EXCL_FLG_NEW) 
+            OR (EXCL_FLG IS NULL)
+        )
+SELECT 
+  * INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP15 
+FROM 
+  GENERATED_EXCLUSION_CONFIG;
+
+---------------------------------------------------------------
+-- STEP 16: GENERATED_EXCLUSION_CONFIG_WITH_RULE_ID
+---------------------------------------------------------------
+
+--TRUNCATE TABLE
+TRUNCATE TABLE FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED;
+
+--LOADING RESULT INTO FINAL OUTPUT TABLE
+WITH GENERATED_EXCLUSION_CONFIG_WITH_RULE_ID AS (
+  SELECT 
+    DISTINCT * 
+  FROM 
+    (
+      SELECT 
+        ENTITY_ID, 
+        CASE WHEN ACTION = 'U' THEN RULE_ID ELSE RULE_ID + RN END AS RULE_ID, 
+        EXCL_FIELD1, 
+        CASE WHEN (
+          EXCL_FIELD1 = 'TXN_DESC' 
+          AND LEN(EXCL_FIELD1_COND) >= 20
+        ) THEN LEFT(EXCL_FIELD1_COND, 19)+ '%' ELSE EXCL_FIELD1_COND END EXCL_FIELD1_COND, 
+        EXCL_FIELD2, 
+        CASE WHEN (
+          EXCL_FIELD2 = 'TXN_DESC' 
+          AND LEN(EXCL_FIELD2_COND) >= 20
+        ) THEN LEFT(EXCL_FIELD2_COND, 19)+ '%' ELSE EXCL_FIELD2_COND END EXCL_FIELD2_COND, 
+        EXCL_FLG, 
+        LEFT(DESCRIPTION, 20) DESCRIPTION, 
+		RECONCILIATION_IND,
+        ACTION, 
+        USER_PROFILE, 
+        UPDATE_DATE 
+      FROM 
+        (
+          SELECT 
+            *, 
+            ROW_NUMBER() OVER(
+              ORDER BY 
+                ACTION, 
+                EXCL_FIELD1_COND, 
+                EXCL_FIELD2_COND
+            ) AS RN 
+          FROM 
+            FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED_STEP15 
+        ) A
+    ) A
+)
+
+INSERT INTO FOND_ID.FOND_EXCLUSION_CONFIG_GENERATED
+SELECT
+  *,
+  @BATCH_MASTER_ID AS BATCH_MASTER_ID,
+  @BATCH_RUN_ID AS BATCH_RUN_ID,
+  @JOB_MASTER_ID AS JOB_MASTER_ID,
+  @JOB_RUN_ID AS JOB_RUN_ID,
+  SUBSTRING( CAST(@BATCH AS VARCHAR),1,6) BATCHDATE,
+  GETDATE() ETL_PROCESS_DATE_TIME
+FROM GENERATED_EXCLUSION_CONFIG_WITH_RULE_ID;
+
+---------------------------------------------------------------
+-- STEP 3: FINISHING THE PROCESS
+---------------------------------------------------------------
+SET @V_START 		= current_timestamp;
+SET @V_SEQNO		= @V_SEQNO + 1;
+SET @V_DESCRIPTION 	= 'FINISH '+@V_FUNCTION_NAME+': '+ convert(varchar(20),current_timestamp);
+PRINT	@V_DESCRIPTION;
+	
+INSERT INTO STAG_ID.STAG_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+VALUES(@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+
+
+END TRY
+
+
+BEGIN CATCH 
+
+	DECLARE @ErrorMessage AS NVARCHAR(1000) = ERROR_MESSAGE()
+	DECLARE @ErrorSeverity AS INT = ERROR_SEVERITY()
+	DECLARE @ErrorState AS INT = ERROR_STATE() 
+
+	SET @V_START = current_timestamp;
+	SET @V_SEQNO = @V_SEQNO + 1;
+	SET @V_DESCRIPTION = @ErrorMessage
+
+	INSERT INTO STAG_ID.STAG_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,[DESCRIPTION])
+	VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+
+	RAISERROR(@ErrorMessage,@ErrorSeverity,@ErrorState)
+
+END CATCH
+;
+

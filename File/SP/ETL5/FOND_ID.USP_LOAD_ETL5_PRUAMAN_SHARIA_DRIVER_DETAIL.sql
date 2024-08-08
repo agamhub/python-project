@@ -1,0 +1,257 @@
+CREATE PROC [FOND_ID].[USP_LOAD_ETL5_PRUAMAN_SHARIA_DRIVER_DETAIL] @batch [nvarchar](30),@JOBNAMESTR [NVARCHAR](2000) AS
+ 
+--DECLARE @batch nvarchar(30)='20190201'
+DECLARE @YTD FLOAT;
+
+--get last month
+--DECLARE @batchdate DATETIME = CONVERT(DATETIME,convert(varchar(10),dateadd(month,-1,CONVERT(date,@batch)),112));
+--get current month
+DECLARE @batchdate DATETIME = CONVERT(DATETIME,convert(varchar(10),dateadd(month,0,CONVERT(date,@batch)),112));
+DECLARE @V_DATEFROM DATETIME = DATEADD(yy, DATEDIFF(yy, 0, @batchdate), 0) ;
+DECLARE @V_DATETO DATETIME = CONVERT(DATETIME,EOMONTH(@batchdate));
+
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	DECLARE @V_START		datetime;
+	DECLARE @V_END			datetime;
+	DECLARE @V_FUNCTION_NAME	NVARCHAR(2000) = 'FOND_ID.USP_LOAD_ETL5_PRUAMAN_SHARIA_DRIVER_DETAIL';
+	DECLARE @V_DESCRIPTION	NVARCHAR(2000);
+	DECLARE @V_CMD			NVARCHAR(2000);
+	DECLARE @V_SEQNO			integer = 0;
+	DECLARE @V_PRD_ID		integer;
+	DECLARE @V_CREATED_DATE	datetime;
+	DECLARE @V_START_DATE	date;
+	DECLARE @V_END_DATE		date;
+	
+	
+	------START GET RUN ID DETAIL FROM ABC------
+	DECLARE 
+	@BATCH_MASTER_ID  VARCHAR(20) = 0,
+	@BATCH_RUN_ID    VARCHAR(20) = 0,
+	@JOB_MASTER_ID   VARCHAR(20) = 0,
+	@JOB_RUN_ID     VARCHAR(20) = 0,
+	@GMT_START_DTTM   VARCHAR(19) = CONVERT(DATETIME2, GETDATE());
+
+	EXEC STAG_ID.USP_GetRunIdReturn
+	@JobName     = @JOBNAMESTR,
+	@BATCH_MASTER_ID = @BATCH_MASTER_ID OUTPUT,
+	@BATCH_RUN_ID  = @BATCH_RUN_ID OUTPUT,
+	@JOB_MASTER_ID  = @JOB_MASTER_ID OUTPUT,
+	@JOB_RUN_ID   = @JOB_RUN_ID OUTPUT,
+	@GMT_START_DTTM = @GMT_START_DTTM OUTPUT;
+	------END GET RUN ID DETAIL FROM ABC------
+
+	BEGIN TRY
+
+		SET @V_START_DATE	= convert(date, cast(@batch as varchar(8))); -- valuation extract date
+		PRINT	'Start date :' + convert(varchar,@V_START_DATE,112);
+		SET @V_START 	= convert(datetime,getDATE());
+
+		SET @V_DESCRIPTION 	= 'Start ' + @V_FUNCTION_NAME + ' : ' + convert(varchar,@V_START,121);
+		PRINT	@V_DESCRIPTION;
+		SET @V_SEQNO		= @V_SEQNO + 1;
+
+		INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+		VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);	
+	
+	SET NOCOUNT ON;
+
+---------------------------- DROP TEMPORARY TABLE ------------------------------
+		IF OBJECT_ID('TempDB..#etl5_pruaman_sharia_driver') IS NOT NULL
+		BEGIN
+			DROP TABLE #etl5_pruaman_sharia_driver
+		END;
+
+		--- ADDED FOR NEW SINGLE DRIVER 2022-03-16
+		IF OBJECT_ID('TempDB..#etl5_pruaman_sharia_fyp_driver') IS NOT NULL
+		BEGIN
+			DROP TABLE #etl5_pruaman_sharia_fyp_driver
+		END;
+
+		SET @V_SEQNO 	= @V_SEQNO + 1;
+		SET @V_START 	= convert(datetime,getDATE());
+		SET @V_DESCRIPTION	= 'INSERT INTO TEMPORARY TABLE etl5_pruaman_sharia_driver : ' + convert(varchar,@V_START,121);
+		PRINT @V_DESCRIPTION;
+	
+		INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+		VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+	
+---------------------------- INSERT INTO TEMPORARY TABLE ------------------------------
+
+	
+SELECT
+    --note: specific to June 2021, formula of accounting_period needs to be adjusted to add 1 month
+	YEAR(DATEADD(month, 0,DELIVERY_DATE)) * 1000 + 0 + MONTH(DATEADD(month, 0,DELIVERY_DATE))  ACCOUNTING_PERIOD,
+	CAST((DATEADD(ms,-2,DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0))) AS DATE) as TRANSACTION_DATE,--
+	--a.CONTRACT_NUMBER as POL_NO,
+	a.POLICY_ID as POL_NO,
+	'PruAmanS' as BENF_CD,
+	'PruAmanS' as PROD_CD,
+	'GTNN000' as ADJ_TO,
+	 null as DIST_CHAN,
+	--PREMIUM_GROSS as GROSS_PREMIUM,--> FOR UAT PURPOSE
+	PREMIUM_GROSS * -1 as GROSS_PREMIUM,
+	b.YTD as GROSS_PREMIUM_YTD,
+	--PREMIUM_GROSS/10 APE,--> FOR UAT PURPOSE
+	PREMIUM_GROSS/10 APE,
+	--count(*) over (partition by DELIVERY_DATE) as PCNT_GROSS,
+	1 as PCNT_GROSS,
+	--PREMIUM_GROSS as RENEWAL_PREMIUM,
+	0 as RENEWAL_PREMIUM,
+	INITIAL_LOAN as PER_SUM_ASSURED,
+	1 as NOP_NB,
+	0 as PER_ACCOUNT_VALUE,
+	--PREMIUM_GROSS as COLLECTED_PREMIUM,--> FOR UAT PURPOSE
+	PREMIUM_GROSS * -1 as COLLECTED_PREMIUM,
+	@BATCH_MASTER_ID AS DL_PLAI_BATCHID,
+	@BATCH_RUN_ID AS DL_PLAI_BATCH_RUN_ID,
+	@JOB_MASTER_ID AS DL_PLAI_JOBID,
+	@JOB_RUN_ID AS DL_PLAI_JOB_RUN_ID,     
+     left(replace(Cast(@batch AS NVARCHAR(12)),'-',''),6)  DL_PLAI_BATCHDATE,
+     --left(@batch,6) as  DL_PLAI_BATCHDATE,
+    GETDATE() ETL_PROCESS_DATE_TIME
+INTO #etl5_pruaman_sharia_driver
+FROM STAG_ID.STAG_PRUSYARIAH_STAG_ETL4_POLICY a
+LEFT JOIN
+(
+	SELECT 
+        sum(PREMIUM_GROSS * -1) YTD, POLICY_ID 
+	FROM 
+	STAG_ID.STAG_PRUSYARIAH_STAG_ETL4_POLICY a
+	WHERE 1=1 
+		AND DELIVERY_DATE BETWEEN @V_DATEFROM AND @V_DATETO
+	group by POLICY_ID
+)b on a.POLICY_ID = b.POLICY_ID	
+where 1=1 
+-- and CREATED_BY is null -- Temporary Script for UAT
+-- and CONTRACT_OWNER  in ('BCA Syariah','BPRS BINA AMWALUL HASANAH')
+and year(DELIVERY_DATE) = YEAR(@batchdate)
+and month(DELIVERY_DATE) = MONTH(@batchdate);
+
+
+--- ADDED FOR NEW SINGLE DRIVER 2022-03-16
+SELECT
+	--note: specific to June 2021, formula of accounting_period needs to be adjusted to add 1 month
+	YEAR(DATEADD(month, 0,DELIVERY_DATE)) * 1000 + 0 + MONTH(DATEADD(month, 0,DELIVERY_DATE))  ACCOUNTING_PERIOD,
+	CAST((DATEADD(ms,-2,DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0))) AS DATE) as TRANSACTION_DATE,--
+	--a.CONTRACT_NUMBER as POL_NO,
+	a.POLICY_ID as POL_NO,
+	'PruAmanS' as BENF_CD,
+	'PruAmanS' as PROD_CD,
+	'GTNN000' as ADJ_TO,
+	 null as DIST_CHAN,
+	--PREMIUM_GROSS as GROSS_PREMIUM,--> FOR UAT PURPOSE
+	PREMIUM_GROSS * -1 as GROSS_PREMIUM,
+	b.YTD as GROSS_PREMIUM_YTD,
+	--PREMIUM_GROSS/10 APE,--> FOR UAT PURPOSE
+	PREMIUM_GROSS/10 APE,
+	--count(*) over (partition by DELIVERY_DATE) as PCNT_GROSS,
+	1 as PCNT_GROSS,
+	--PREMIUM_GROSS as RENEWAL_PREMIUM,
+	0 as RENEWAL_PREMIUM,
+	INITIAL_LOAN as PER_SUM_ASSURED,
+	1 as NOP_NB,
+	0 as PER_ACCOUNT_VALUE,
+	--PREMIUM_GROSS as COLLECTED_PREMIUM,--> FOR UAT PURPOSE
+	PREMIUM_GROSS * -1 as COLLECTED_PREMIUM,
+	PREMIUM_GROSS * -1 as FYP,
+	@BATCH_MASTER_ID AS DL_PLAI_BATCHID,
+	@BATCH_RUN_ID AS DL_PLAI_BATCH_RUN_ID,
+	@JOB_MASTER_ID AS DL_PLAI_JOBID,
+	@JOB_RUN_ID AS DL_PLAI_JOB_RUN_ID,    
+     left(replace(Cast(@batch AS NVARCHAR(12)),'-',''),6)  DL_PLAI_BATCHDATE,
+     --left(@batch,6) as  DL_PLAI_BATCHDATE,
+    GETDATE() ETL_PROCESS_DATE_TIME
+INTO #etl5_pruaman_sharia_fyp_driver
+FROM STAG_ID.STAG_PRUSYARIAH_STAG_ETL4_POLICY a
+LEFT JOIN
+(
+	SELECT 
+        sum(PREMIUM_GROSS * -1) YTD, POLICY_ID 
+	FROM 
+	STAG_ID.STAG_PRUSYARIAH_STAG_ETL4_POLICY a
+	WHERE 1=1 
+		AND DELIVERY_DATE BETWEEN @V_DATEFROM AND @V_DATETO
+	group by POLICY_ID
+)b on a.POLICY_ID = b.POLICY_ID	
+where 1=1 
+-- and CREATED_BY is null -- Temporary Script for UAT
+-- and CONTRACT_OWNER  in ('BCA Syariah','BPRS BINA AMWALUL HASANAH')
+and year(DELIVERY_DATE) = YEAR(@batchdate)
+and month(DELIVERY_DATE) = MONTH(@batchdate)
+--AND YEAR(LOAN_DATE) = YEAR(@batchdate);
+
+		---------------------------- TO Handle rerun process ------------------------------
+BEGIN TRANSACTION;
+SET @V_SEQNO 	= @V_SEQNO + 1;
+SET @V_START 	= convert(datetime,getDATE());
+SET @V_DESCRIPTION	= 'DELETE DATA FROM FOND_ID.FOND_ETL5_PRUAMAN_SHARIA_DRIVER_DETAIL : ' + convert(varchar,@V_START,121);
+PRINT @V_DESCRIPTION;
+
+INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+
+
+
+DELETE FROM FOND_ID.FOND_ETL5_PRUAMAN_SHARIA_DRIVER_DETAIL
+WHERE ACCOUNTING_PERIOD = YEAR(DATEADD(month, 0,CONVERT(date, @batch))) * 1000 + 0 + MONTH(DATEADD(month, 0,CONVERT(date, @batch)));
+
+
+DELETE FROM FOND_ID.FOND_ETL5_PRUAMAN_SHARIA_FYP_DRIVER_DETAIL
+WHERE ACCOUNTING_PERIOD = YEAR(DATEADD(month, 0,CONVERT(date, @batch))) * 1000 + 0 + MONTH(DATEADD(month, 0,CONVERT(date, @batch)));
+
+
+---------------------------- TO Handle rerun process ------------------------------
+
+SET @V_SEQNO 	= @V_SEQNO + 1;
+SET @V_START 	= convert(datetime,getDATE());
+SET @V_DESCRIPTION	= 'INSERT INTO TABLE FOND_ID.FOND_ETL5_PRUAMAN_SHARIA_DRIVER_DETAIL : ' + convert(varchar,@V_START,121);
+PRINT @V_DESCRIPTION;
+
+INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+
+
+INSERT INTO FOND_ID.FOND_ETL5_PRUAMAN_SHARIA_DRIVER_DETAIL
+SELECT * 
+FROM #etl5_pruaman_sharia_driver;
+
+INSERT INTO FOND_ID.FOND_ETL5_PRUAMAN_SHARIA_FYP_DRIVER_DETAIL
+SELECT * 
+FROM #etl5_pruaman_sharia_fyp_driver;
+  
+			IF @@TRANCOUNT > 0
+                COMMIT;
+  
+---------------------------- DROP TEMPORARY TABLE ------------------------------  
+IF OBJECT_ID('tempdb..#etl5_pruaman_sharia_driver') IS NOT NULL
+BEGIN
+	DROP TABLE #etl5_pruaman_sharia_driver
+END;  
+
+IF OBJECT_ID('tempdb..#etl5_pruaman_sharia_fyp_driver') IS NOT NULL
+BEGIN
+	DROP TABLE #etl5_pruaman_sharia_fyp_driver
+END;  
+
+	END TRY
+
+	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+                ROLLBACK;
+	    SET @V_SEQNO 	= @V_SEQNO + 1;
+		SET @V_START 	= convert(datetime,getDATE());
+		SET @V_END 	= convert(datetime,getDATE());
+		SET @V_DESCRIPTION	='Error execution for function on ' 
+							+ @V_FUNCTION_NAME + ' at ' + convert(varchar,@V_START,121) 
+							+ ' with Error Message : ' + ERROR_MESSAGE();
+		PRINT @V_DESCRIPTION;
+		
+		SELECT ERROR_MESSAGE();	
+	
+		INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION) VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+		raiserror(@V_DESCRIPTION, 18, 1)
+	END CATCH
+
+END;

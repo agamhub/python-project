@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e" pages="26">
     <diagram id="cv56iDvGA2n9FS4G8ONr" name="DR in high availability">
-        <mxGraphModel dx="1375" dy="211" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1914" dy="160" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -601,7 +601,7 @@
         </mxGraphModel>
     </diagram>
     <diagram name="Spark Enhancement A01" id="xDyS9JofmBk2Bok3xUI4">
-        <mxGraphModel dx="824" dy="321" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1064" dy="216" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -678,7 +678,7 @@
         </mxGraphModel>
     </diagram>
     <diagram name="Spark Enhancement A02" id="ioxiWjXmIRQ-YLJjdX6c">
-        <mxGraphModel dx="989" dy="1491" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1064" dy="1260" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -820,7 +820,7 @@
         </mxGraphModel>
     </diagram>
     <diagram name="Azure X GCS" id="yfIRFFoJwpPQg_N9UxZr">
-        <mxGraphModel dx="139" dy="391" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="214" dy="216" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -890,7 +890,7 @@
         </mxGraphModel>
     </diagram>
     <diagram name="ADLS" id="xUm39ocoTSzHMRsq0qaR">
-        <mxGraphModel dx="139" dy="391" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="214" dy="216" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="8JtAzhYeSp3cwZxPdNKn-0"/>
                 <mxCell id="8JtAzhYeSp3cwZxPdNKn-1" parent="8JtAzhYeSp3cwZxPdNKn-0"/>
@@ -976,7 +976,7 @@
         </mxGraphModel>
     </diagram>
     <diagram id="Kdel8rYbnEynawpTfTAY" name="AzureToGCS">
-        <mxGraphModel dx="989" dy="391" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1064" dy="216" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -1057,7 +1057,7 @@
         </mxGraphModel>
     </diagram>
     <diagram id="L0E0lT2OnqQYdUi5S-uM" name="Renova Application">
-        <mxGraphModel dx="989" dy="1491" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1064" dy="1316" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -1080,7 +1080,7 @@
         </mxGraphModel>
     </diagram>
     <diagram id="PHP2Hxs3e3oXULPDccag" name="IFRS17 Airflow Orchestration">
-        <mxGraphModel dx="1839" dy="391" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1914" dy="216" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -1240,9 +1240,9 @@
                 <mxCell id="Q1RXpI_L3_fTfVk8BN7p-88" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="-520" y="560" width="1210" height="2680" as="geometry"/>
                 </mxCell>
-                <mxCell id="Q1RXpI_L3_fTfVk8BN7p-31" value="DAILY" style="swimlane;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;startSize=20;html=1;" parent="1" vertex="1" collapsed="1">
-                    <mxGeometry x="-510" y="600" width="70" height="30" as="geometry">
-                        <mxRectangle x="-510" y="600" width="770" height="480" as="alternateBounds"/>
+                <mxCell id="Q1RXpI_L3_fTfVk8BN7p-31" value="DAILY" style="swimlane;childLayout=stackLayout;resizeParent=1;resizeParentMax=0;startSize=20;html=1;" parent="1" vertex="1">
+                    <mxGeometry x="-510" y="600" width="770" height="480" as="geometry">
+                        <mxRectangle x="-510" y="600" width="70" height="30" as="alternateBounds"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="Q1RXpI_L3_fTfVk8BN7p-44" value="PL_PLAI_DLE_LOADSTAG_BATCH01A" style="swimlane;startSize=20;html=1;horizontal=1;glass=0;" parent="Q1RXpI_L3_fTfVk8BN7p-31" vertex="1">

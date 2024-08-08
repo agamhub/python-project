@@ -1,0 +1,233 @@
+CREATE PROC [FOND_ID].[USP_LOAD_ETL5_OMNI_DRIVER_DETAIL] @batch [nvarchar](30) AS
+BEGIN 
+	DECLARE @V_START		datetime;
+	DECLARE @V_END			datetime;
+	DECLARE @V_FUNCTION_NAME	NVARCHAR(2000) = 'FOND_ID.FOND_ETL5_OMNI_DRIVER_DETAIL';
+	DECLARE @V_DESCRIPTION	NVARCHAR(2000);
+	DECLARE @V_CMD			NVARCHAR(2000);
+	DECLARE @V_SEQNO			integer = 0;
+	DECLARE @V_PRD_ID		integer;
+	DECLARE @V_CREATED_DATE	datetime;
+	DECLARE @V_START_DATE	date;
+	DECLARE @V_END_DATE		date;
+	DECLARE @drivername NVARCHAR(15);
+	SET @drivername = 'OMNI';
+	
+	
+	BEGIN TRY
+
+		
+		SET @V_START_DATE	= convert(date, cast(@batch as varchar(8))); -- valuation extract date
+		PRINT	'Start date :' + convert(varchar,@V_START_DATE,112);
+		SET @V_START 	= convert(datetime,getDATE());
+
+		SET @V_DESCRIPTION 	= 'Start ' + @V_FUNCTION_NAME + ' : ' + convert(varchar,@V_START,121);
+		PRINT	@V_DESCRIPTION;
+		SET @V_SEQNO		= @V_SEQNO + 1;
+
+		INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+		VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+	
+		---------------------------- DROP TEMPORARY TABLE ------------------------------
+		IF OBJECT_ID('tempdb..#etl5_omni_driver') IS NOT NULL
+		BEGIN
+			DROP TABLE #etl5_omni_driver
+		END;
+
+
+		---------------------------- INSERT INTO TEMPORARY TABLE ------------------------------
+		SET @V_SEQNO 	= @V_SEQNO + 1;
+		SET @V_START 	= convert(datetime,getDATE());
+		SET @V_DESCRIPTION	= 'INSERT INTO TEMPORARY TABLE etl5_omni_driver : ' + convert(varchar,@V_START,121);
+		PRINT @V_DESCRIPTION;
+	
+		INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+		VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+	
+--declare @batch varchar(10)='202001'
+		select * INTO #etl5_omni_driver from (
+		select  
+		cast(POLICY_ID as varchar)+ '-' + cast(MEMBER_ID as varchar) POL_NO,
+		RECEIPT_DATE,
+		POLICY_NO,
+		POLICY_ID,
+		GROUP_NAME,
+		MEMBER_ID,
+		PRODUCT_CODE,
+		PRODUCT_NAME,
+		sum(AMOUNT) as AMOUNT,
+		sum(SUM_ASSURED) as SUM_ASSURED,
+		UNDERWRITING_FLAG
+		from ( 
+			SELECT
+				cast(A.APPLICATION_DATE as date) AS RECEIPT_DATE,
+				cast(G.GROUP_POLICY_NUMBER as bigint) AS POLICY_NO,
+				cast(PO.ID as bigint) AS POLICY_ID, 
+				G.NAME AS GROUP_NAME,
+				cast(PM.MEMBER_ID as bigint) AS MEMBER_ID,
+				F.CODE AS PRODUCT_CODE,
+				F.NAME AS PRODUCT_NAME,
+				SUM(cast(A.APPLICATION_AMOUNT as float) ) AS AMOUNT,
+				SUM(MPR.SUM_ASSURED) as SUM_ASSURED,
+				MPR.UNDERWRITING_FLAG as UNDERWRITING_FLAG,
+				F.PRODUCT_CATEGORY_CODE
+			FROM
+				ifrs17_dw.STAG_ID.STAG_OMNI_OMNI_RECEIPT_APPLICATION A
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_STAG_BILLING_TRX B ON
+				A.BILLING_TRX_ID = B.ID
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_OMNI_PREMIUM_LINE C ON
+				B.PREMIUM_LINE_ID = C.ID
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_OMNI_MEMBER_PRODUCT D ON
+				C.MEMBER_PRODUCT_ID = D.ID
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_STAG_POLICY_MEMBER PM ON
+				D.POLICY_MEMBER_ID = PM.ID
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_STAG_MEMBER MI ON
+				PM.MEMBER_ID = MI.ID
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_STAG_PRODUCT_OPTION E ON
+				D.PRODUCT_OPTION_ID = E.ID
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_STAG_PRODUCT F ON
+				E.PRODUCT_ID = F.ID
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_STAG_BILLING_SUBMISSION BS ON
+				B.BILLING_SUBMISSION_ID = BS.ID
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_STAG_CUSTOMER_ACCOUNT CACC ON
+				C.CUSTOMER_ACCOUNT_ID = CACC.ID
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_STAG_GROUPS G ON
+				CACC.GROUPS_ID = G.ID
+			JOIN ifrs17_dw.STAG_ID.STAG_OMNI_STAG_POLICY PO ON
+				B.POLICY_ID = PO.ID
+			LEFT JOIN ifrs17_dw.STAG_ID.STAG_OMNI_OMNI_MEMBER_PRODUCT_RISK MPR on cast(D.MEMBER_PRODUCT_RISK_ID as bigint) = MPR.ID
+			--LEFT JOIN STAG_ID.STAG_OMNI_ETL4_OMNI_PRODUCTS_MAPPING_BASIC_PRODUCT BP on cast(F.CODE as varchar(100))=cast(BP.CODE as varchar(100))
+			WHERE
+				G.ID > 11
+				AND G.GROUP_POLICY_NUMBER NOT IN ('1000022',
+				'1000023',
+				'3000028',
+				'3000029',
+				'3000030',
+				'3000031',
+				'3000032',
+				'3000033',
+				'1000024',
+				'1000060',
+				'2000020',
+				'3000113')
+				AND left(convert(varchar,A.APPLICATION_DATE,112),6)=left(@batch,6)
+				AND F.PRODUCT_CATEGORY_CODE='BASE'
+			GROUP BY
+				A.APPLICATION_DATE,
+				G.GROUP_POLICY_NUMBER,
+				PO.ID,
+				G.NAME,
+				PM.MEMBER_ID,
+				F.CODE,
+				F.NAME,
+				PO.START_DATE,
+				MPR.UNDERWRITING_FLAG,
+				F.PRODUCT_CATEGORY_CODE
+		) n
+		group BY 		
+		RECEIPT_DATE,
+		POLICY_NO,
+		POLICY_ID,
+		GROUP_NAME,
+		MEMBER_ID,
+		PRODUCT_CODE,
+		PRODUCT_NAME,
+		UNDERWRITING_FLAG
+		) v;
+
+		
+		---------------------------- TO Handle rerun process ------------------------------
+			BEGIN TRANSACTION;
+			SET @V_SEQNO 	= @V_SEQNO + 1;
+			SET @V_START 	= convert(datetime,getDATE());
+			SET @V_DESCRIPTION	= 'DELETE DATA FROM FOND_ID.FOND_ETL5_OMNI_DRIVER_DETAIL : ' + convert(varchar,@V_START,121);
+			PRINT @V_DESCRIPTION;
+		
+			INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+			VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+		
+--declare @batch varchar(10)='202001'
+			DELETE FROM FOND_ID.FOND_ETL5_OMNI_DRIVER_DETAIL 
+			WHERE left(convert(varchar,RECEIPT_DATE,112),6)=left(@batch,6);
+			
+
+			
+			---------------------------- TO Handle rerun process ------------------------------
+			SET @V_SEQNO 	= @V_SEQNO + 1;
+			SET @V_START 	= convert(datetime,getDATE());
+			SET @V_DESCRIPTION	= 'INSERT INTO TABLE FOND_ID.FOND_ETL5_OMNI_DRIVER_DETAIL : ' + convert(varchar,@V_START,121);
+			PRINT @V_DESCRIPTION;
+		
+			INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+			VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+			
+--		declare @batch varchar(10)='202001'
+
+			INSERT INTO FOND_ID.FOND_ETL5_OMNI_DRIVER_DETAIL
+			(POL_NO,RECEIPT_DATE, POLICY_NO, POLICY_ID, GROUP_NAME, MEMBER_ID, PRODUCT_CODE, PRODUCT_NAME, AMOUNT, SUM_ASSURED, UNDERWRITING_FLAG, BATCH_MASTER_ID, BATCH_RUN_ID, JOB_MASTER_ID, JOB_RUN_ID, BATCHDATE, ETL_PROCESS_DATE_TIME)
+			SELECT 
+			POL_NO,
+			RECEIPT_DATE,
+			POLICY_NO,
+			POLICY_ID,
+			GROUP_NAME,
+			MEMBER_ID,
+			PRODUCT_CODE,
+			PRODUCT_NAME,
+			AMOUNT,
+			SUM_ASSURED,
+			UNDERWRITING_FLAG,
+			0 as BATCH_MASTER_ID,
+			0 as BATCH_RUN_ID,
+			0 as JOB_MASTER_ID,
+			0 as JOB_RUN_ID,
+			0 as BATCHDATE,
+			getdate() as ETL_PROCESS_DATE_TIME
+			FROM #etl5_omni_driver;
+		
+			---------------------------- ETL5 LOGGING ----------------------------      
+       	
+			DECLARE @V_TOTAL_ROWS integer = 0;
+			DECLARE @V_PERIOD nvarchar(10);
+			SET @V_TOTAL_ROWS = (SELECT COUNT(1) as totalrows FROM #etl5_pruaman_driver) ;
+	        SET @V_PERIOD = CONCAT(YEAR(DATEADD(month, 0,CONVERT(date, @batch))), RIGHT(CONCAT('000', MONTH(DATEADD(month, 0,CONVERT(date, @batch)))),3))
+	
+			INSERT INTO FOND_ID.FOND_IFRS17_ETL5_PROC_LOG (PROC_DATE,FUNC_NAME,TRGT_TABLE_NAME,DRIVER_NAME,TOTAL_ROWS,DESCRIPTION,PERIOD)
+			VALUES (@V_START,@V_FUNCTION_NAME,'FOND_ID.FOND_ETL5_OMNI_DRIVER_DETAIL'
+			,@drivername,@V_TOTAL_ROWS,'MTD',@V_PERIOD);
+			
+			
+			IF @@TRANCOUNT > 0
+                COMMIT;
+		  
+		  
+		  
+		---------------------------- INSERT INTO DATA INTO TARGET TABLE ------------------------------  
+		IF OBJECT_ID('tempdb..#etl5_omni_driver') IS NOT NULL
+		BEGIN
+			DROP TABLE #etl5_pruaman_driver
+		END;  
+
+
+	END TRY
+
+	BEGIN CATCH
+	
+	
+		IF @@TRANCOUNT > 0
+                ROLLBACK;
+	    SET @V_SEQNO 	= @V_SEQNO + 1;
+		SET @V_START 	= convert(datetime,getDATE());
+		SET @V_END 	= convert(datetime,getDATE());
+		SET @V_DESCRIPTION	='Error execution for function on ' 
+							+ @V_FUNCTION_NAME + ' at ' + convert(varchar,@V_START,121) 
+							+ ' with Error Message : ' + ERROR_MESSAGE();
+		PRINT @V_DESCRIPTION;
+		
+		
+		INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION) VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+		raiserror(@V_DESCRIPTION, 18, 1)
+	END CATCH
+END;
+

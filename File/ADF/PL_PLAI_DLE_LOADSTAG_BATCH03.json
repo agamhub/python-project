@@ -1,0 +1,561 @@
+{
+    "id":  "/subscriptions/b77ea8f8-f67f-498a-bc81-574229764a8a/resourceGroups/rsg-sgrass-dev-az1-taznv1/providers/Microsoft.DataFactory/factories/dtf-sgrass-dev-az1-taznv105/pipelines/PL_PLAI_DLE_LOADSTAG_BATCH03",
+    "name":  "PL_PLAI_DLE_LOADSTAG_BATCH03",
+    "type":  "Microsoft.DataFactory/factories/pipelines",
+    "properties":  {
+                       "activities":  [
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "SETBATCHDATE",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "ABC Batch Pre",
+                                              "policy":  {
+                                                             "retry":  3,
+                                                             "retryIntervalInSeconds":  180,
+                                                             "secureInput":  false,
+                                                             "secureOutput":  false,
+                                                             "timeout":  "7.00:00:00"
+                                                         },
+                                              "type":  "ExecuteSSISPackage",
+                                              "typeProperties":  {
+                                                                     "connectVia":  {
+                                                                                        "referenceName":  "SSISDB-CIT-PLAI",
+                                                                                        "type":  "IntegrationRuntimeReference"
+                                                                                    },
+                                                                     "environmentPath":  null,
+                                                                     "loggingLevel":  "Basic",
+                                                                     "packageLocation":  {
+                                                                                             "packagePath":  "SIT/ABC_FRAMEWORK/LOGG_BATCH_START.dtsx",
+                                                                                             "type":  "SSISDB"
+                                                                                         },
+                                                                     "packageParameters":  {
+                                                                                               "param_BATCH_DATE":  {
+                                                                                                                        "value":  {
+                                                                                                                                      "type":  "Expression",
+                                                                                                                                      "value":  "@concat(substring(variables(\u0027param_BATCH_DATE\u0027),4,2),\u0027/1/\u0027,substring(variables(\u0027param_BATCH_DATE\u0027),0,4))"
+                                                                                                                                  }
+                                                                                                                    },
+                                                                                               "param_BATCH_NAME":  {
+                                                                                                                        "value":  {
+                                                                                                                                      "type":  "Expression",
+                                                                                                                                      "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                                                  }
+                                                                                                                    }
+                                                                                           }
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+
+                                                            ],
+                                              "name":  "SETBATCHDATE",
+                                              "type":  "SetVariable",
+                                              "typeProperties":  {
+                                                                     "value":  {
+                                                                                   "type":  "Expression",
+                                                                                   "value":  "@if(equals(pipeline().parameters.param_BATCH_DATE,null),getPastTime(1, \u0027Month\u0027, \u0027yyyyMM\u0027),pipeline().parameters.param_BATCH_DATE)"
+                                                                               },
+                                                                     "variableName":  "param_BATCH_DATE"
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "LIFEASIA_ETL4_ACMVPF",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_ETL4_GENLPF",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_DLE_PS1150_LA1",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_DLE_PS114F_LA1",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_DLE_PS114F_5",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_DLE_PS1150_5",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_ETL4_GTRNPF",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_DLE_ZGODPF",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_DLE_ZNGSPF",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_ETL4_CHDRPF",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_ETL4_RTRNPF",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "ABC Batch Post",
+                                              "policy":  {
+                                                             "retry":  3,
+                                                             "retryIntervalInSeconds":  180,
+                                                             "secureInput":  false,
+                                                             "secureOutput":  false,
+                                                             "timeout":  "7.00:00:00"
+                                                         },
+                                              "type":  "ExecuteSSISPackage",
+                                              "typeProperties":  {
+                                                                     "connectVia":  {
+                                                                                        "referenceName":  "SSISDB-CIT-PLAI",
+                                                                                        "type":  "IntegrationRuntimeReference"
+                                                                                    },
+                                                                     "environmentPath":  null,
+                                                                     "loggingLevel":  "Basic",
+                                                                     "packageLocation":  {
+                                                                                             "packagePath":  "SIT/ABC_FRAMEWORK/LOGG_BATCH_END.dtsx",
+                                                                                             "type":  "SSISDB"
+                                                                                         },
+                                                                     "packageParameters":  {
+                                                                                               "param_BATCH_DATE":  {
+                                                                                                                        "value":  {
+                                                                                                                                      "type":  "Expression",
+                                                                                                                                      "value":  "@concat(substring(variables(\u0027param_BATCH_DATE\u0027),4,2),\u0027/1/\u0027,substring(variables(\u0027param_BATCH_DATE\u0027),0,4))"
+                                                                                                                                  }
+                                                                                                                    },
+                                                                                               "param_BATCH_NAME":  {
+                                                                                                                        "value":  {
+                                                                                                                                      "type":  "Expression",
+                                                                                                                                      "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                                                  }
+                                                                                                                    }
+                                                                                           }
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_ETL4_ACMVPF",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_ETL4_ACMVPF",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_ETL4_GENLPF",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_ETL4_GENLPF",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_DLE_PS1150_LA1",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_DLE_PS1150_LA1",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_DLE_PS114F_LA1",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_DLE_PS114F_LA1",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_DLE_PS114F_5",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_DLE_PS114F_5",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_DLE_PS1150_5",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_DLE_PS1150_5",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_ETL4_GTRNPF",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_ETL4_GTRNPF",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_DLE_ZGODPF",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_DLE_ZGODPF",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_DLE_ZNGSPF",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_DLE_ZNGSPF",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_ETL4_CHDRPF",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_ETL4_CHDRPF",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          },
+                                          {
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "name":  "LIFEASIA_ETL4_RTRNPF",
+                                              "type":  "ExecutePipeline",
+                                              "typeProperties":  {
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "type":  "Expression",
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME"
+                                                                                                              }
+                                                                                    },
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_ETL4_RTRNPF",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true
+                                                                 },
+                                              "userProperties":  [
+
+                                                                 ]
+                                          }
+                                      ],
+                       "annotations":  [
+                                           "LOADSTAG"
+                                       ],
+                       "folder":  {
+                                      "name":  "PLAI/PL_PLAI_LOCALTODWH/PL_PLAI_BATCH"
+                                  },
+                       "parameters":  {
+                                          "DL_PLAI_BATCHNAME":  {
+                                                                    "defaultValue":  "DLE_LOADSTAG_BATCH03",
+                                                                    "type":  "string"
+                                                                },
+                                          "param_BATCH_DATE":  {
+                                                                   "defaultValue":  "201904",
+                                                                   "type":  "string"
+                                                               }
+                                      },
+                       "variables":  {
+                                         "DL_PLAI_BATCHDATE":  {
+                                                                   "type":  "String"
+                                                               },
+                                         "param_BATCH_DATE":  {
+                                                                  "type":  "String"
+                                                              }
+                                     },
+                       "lastPublishTime":  "2024-02-21T07:40:47Z"
+                   },
+    "etag":  "11004661-0000-1800-0000-65d5a8ff0000"
+}
+

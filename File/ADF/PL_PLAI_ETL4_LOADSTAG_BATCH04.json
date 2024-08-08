@@ -1,0 +1,494 @@
+{
+    "id":  "/subscriptions/b77ea8f8-f67f-498a-bc81-574229764a8a/resourceGroups/rsg-sgrass-dev-az1-taznv1/providers/Microsoft.DataFactory/factories/dtf-sgrass-dev-az1-taznv105/pipelines/PL_PLAI_ETL4_LOADSTAG_BATCH04",
+    "name":  "PL_PLAI_ETL4_LOADSTAG_BATCH04",
+    "type":  "Microsoft.DataFactory/factories/pipelines",
+    "properties":  {
+                       "activities":  [
+                                          {
+                                              "name":  "ABC Batch Pre",
+                                              "type":  "ExecuteSSISPackage",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "SETBATCHDATE",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "timeout":  "7.00:00:00",
+                                                             "retry":  3,
+                                                             "retryIntervalInSeconds":  180,
+                                                             "secureOutput":  false,
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "packageLocation":  {
+                                                                                             "packagePath":  "SIT/ABC_FRAMEWORK/LOGG_BATCH_START.dtsx",
+                                                                                             "type":  "SSISDB"
+                                                                                         },
+                                                                     "environmentPath":  null,
+                                                                     "connectVia":  {
+                                                                                        "referenceName":  "SSISDB-CIT-PLAI",
+                                                                                        "type":  "IntegrationRuntimeReference"
+                                                                                    },
+                                                                     "loggingLevel":  "Basic",
+                                                                     "packageParameters":  {
+                                                                                               "param_BATCH_DATE":  {
+                                                                                                                        "value":  {
+                                                                                                                                      "value":  "@concat(substring(variables(\u0027param_BATCH_DATE\u0027),4,2),\u0027/1/\u0027,substring(variables(\u0027param_BATCH_DATE\u0027),0,4))",
+                                                                                                                                      "type":  "Expression"
+                                                                                                                                  }
+                                                                                                                    },
+                                                                                               "param_BATCH_NAME":  {
+                                                                                                                        "value":  {
+                                                                                                                                      "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME",
+                                                                                                                                      "type":  "Expression"
+                                                                                                                                  }
+                                                                                                                    }
+                                                                                           },
+                                                                     "projectConnectionManagers":  {
+
+                                                                                                   },
+                                                                     "packageConnectionManagers":  {
+
+                                                                                                   }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "SETBATCHDATE",
+                                              "type":  "SetVariable",
+                                              "dependsOn":  [
+
+                                                            ],
+                                              "policy":  {
+                                                             "secureOutput":  false,
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "variableName":  "param_BATCH_DATE",
+                                                                     "value":  {
+                                                                                   "value":  "@if(equals(pipeline().parameters.param_BATCH_DATE,null),getPastTime(1, \u0027Month\u0027, \u0027yyyyMM\u0027),pipeline().parameters.param_BATCH_DATE)",
+                                                                                   "type":  "Expression"
+                                                                               }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "ABC Batch Post",
+                                              "type":  "ExecuteSSISPackage",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "PRUEMAS_ETL1_STAG_ETL1_POLICY_RELATED",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "CONFIG_ETL4_ETL4_PLAI_SUN_GL_MAPPING",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "SUNGL_ETL4_ABSTR_IFRS4_SUNGL",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_ETL4_MF_CASHBACK_ACCRUAL",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "LIFEASIA_ETL4_IFRS17_COA_INSCOPE",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "CONFIG_ETL4_SUNGL_MASTER_ANC_L1",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "CONFIG_ETL4_SUNGL_MASTER_ANC_L2",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                },
+                                                                {
+                                                                    "activity":  "CONFIG_ETL4_PAS_EXCLUSION",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "timeout":  "7.00:00:00",
+                                                             "retry":  3,
+                                                             "retryIntervalInSeconds":  180,
+                                                             "secureOutput":  false,
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "packageLocation":  {
+                                                                                             "packagePath":  "SIT/ABC_FRAMEWORK/LOGG_BATCH_END.dtsx",
+                                                                                             "type":  "SSISDB"
+                                                                                         },
+                                                                     "environmentPath":  null,
+                                                                     "connectVia":  {
+                                                                                        "referenceName":  "SSISDB-CIT-PLAI",
+                                                                                        "type":  "IntegrationRuntimeReference"
+                                                                                    },
+                                                                     "loggingLevel":  "Basic",
+                                                                     "packageParameters":  {
+                                                                                               "param_BATCH_DATE":  {
+                                                                                                                        "value":  {
+                                                                                                                                      "value":  "@concat(substring(variables(\u0027param_BATCH_DATE\u0027),4,2),\u0027/1/\u0027,substring(variables(\u0027param_BATCH_DATE\u0027),0,4))",
+                                                                                                                                      "type":  "Expression"
+                                                                                                                                  }
+                                                                                                                    },
+                                                                                               "param_BATCH_NAME":  {
+                                                                                                                        "value":  {
+                                                                                                                                      "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME",
+                                                                                                                                      "type":  "Expression"
+                                                                                                                                  }
+                                                                                                                    }
+                                                                                           },
+                                                                     "projectConnectionManagers":  {
+
+                                                                                                   },
+                                                                     "packageConnectionManagers":  {
+
+                                                                                                   }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "PRUEMAS_ETL1_STAG_ETL1_POLICY_RELATED",
+                                              "type":  "ExecutePipeline",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_PRUEMAS_ETL1_STAG_ETL1_POLICY_RELATED",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true,
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)",
+                                                                                                                  "type":  "Expression"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME",
+                                                                                                                  "type":  "Expression"
+                                                                                                              }
+                                                                                    }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "CONFIG_ETL4_ETL4_PLAI_SUN_GL_MAPPING",
+                                              "type":  "ExecutePipeline",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_CONFIG_ETL4_ETL4_PLAI_SUN_GL_MAPPING",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true,
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)",
+                                                                                                                  "type":  "Expression"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME",
+                                                                                                                  "type":  "Expression"
+                                                                                                              }
+                                                                                    }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "SUNGL_ETL4_ABSTR_IFRS4_SUNGL",
+                                              "type":  "ExecutePipeline",
+                                              "state":  "Inactive",
+                                              "onInactiveMarkAs":  "Succeeded",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_SUNGL_ETL4_ABSTR_IFRS4_SUNGL",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true,
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)",
+                                                                                                                  "type":  "Expression"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME",
+                                                                                                                  "type":  "Expression"
+                                                                                                              }
+                                                                                    }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "LIFEASIA_ETL4_MF_CASHBACK_ACCRUAL",
+                                              "type":  "ExecutePipeline",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_ETL4_MF_CASHBACK_ACCRUAL",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true,
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)",
+                                                                                                                  "type":  "Expression"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME",
+                                                                                                                  "type":  "Expression"
+                                                                                                              }
+                                                                                    }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "LIFEASIA_ETL4_IFRS17_COA_INSCOPE",
+                                              "type":  "ExecutePipeline",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_LIFEASIA_ETL4_IFRS17_COA_INSCOPE",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true,
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)",
+                                                                                                                  "type":  "Expression"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME",
+                                                                                                                  "type":  "Expression"
+                                                                                                              }
+                                                                                    }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "CONFIG_ETL4_SUNGL_MASTER_ANC_L1",
+                                              "type":  "ExecutePipeline",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_CONFIG_ETL4_SUNGL_MASTER_ANC_L1",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true,
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)",
+                                                                                                                  "type":  "Expression"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME",
+                                                                                                                  "type":  "Expression"
+                                                                                                              }
+                                                                                    }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "CONFIG_ETL4_SUNGL_MASTER_ANC_L2",
+                                              "type":  "ExecutePipeline",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_CONFIG_ETL4_SUNGL_MASTER_ANC_L2",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true,
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)",
+                                                                                                                  "type":  "Expression"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME",
+                                                                                                                  "type":  "Expression"
+                                                                                                              }
+                                                                                    }
+                                                                 }
+                                          },
+                                          {
+                                              "name":  "CONFIG_ETL4_PAS_EXCLUSION",
+                                              "type":  "ExecutePipeline",
+                                              "dependsOn":  [
+                                                                {
+                                                                    "activity":  "ABC Batch Pre",
+                                                                    "dependencyConditions":  [
+                                                                                                 "Succeeded"
+                                                                                             ]
+                                                                }
+                                                            ],
+                                              "policy":  {
+                                                             "secureInput":  false
+                                                         },
+                                              "userProperties":  [
+
+                                                                 ],
+                                              "typeProperties":  {
+                                                                     "pipeline":  {
+                                                                                      "referenceName":  "PL_PLAI_ADLTODWH_CONFIG_ETL4_ETL4_PAS_EXCLUSION",
+                                                                                      "type":  "PipelineReference"
+                                                                                  },
+                                                                     "waitOnCompletion":  true,
+                                                                     "parameters":  {
+                                                                                        "DL_PLAI_BATCHDATE":  {
+                                                                                                                  "value":  "@variables(\u0027param_BATCH_DATE\u0027)",
+                                                                                                                  "type":  "Expression"
+                                                                                                              },
+                                                                                        "DL_PLAI_BATCHNAME":  {
+                                                                                                                  "value":  "@pipeline().parameters.DL_PLAI_BATCHNAME",
+                                                                                                                  "type":  "Expression"
+                                                                                                              }
+                                                                                    }
+                                                                 }
+                                          }
+                                      ],
+                       "policy":  {
+                                      "elapsedTimeMetric":  {
+
+                                                            }
+                                  },
+                       "parameters":  {
+                                          "DL_PLAI_BATCHNAME":  {
+                                                                    "type":  "string",
+                                                                    "defaultValue":  "ETL4_LOADSTAG_BATCH04"
+                                                                },
+                                          "param_BATCH_DATE":  {
+                                                                   "type":  "string",
+                                                                   "defaultValue":  "201904"
+                                                               }
+                                      },
+                       "variables":  {
+                                         "DL_PLAI_BATCHDATE":  {
+                                                                   "type":  "String"
+                                                               },
+                                         "param_BATCH_DATE":  {
+                                                                  "type":  "String"
+                                                              }
+                                     },
+                       "folder":  {
+                                      "name":  "PLAI/PL_PLAI_LOCALTODWH/PL_PLAI_BATCH"
+                                  },
+                       "annotations":  [
+                                           "LOADSTAG"
+                                       ],
+                       "lastPublishTime":  "2024-05-22T08:47:13Z"
+                   },
+    "etag":  "02001c77-0000-1800-0000-664db1110000"
+}
+

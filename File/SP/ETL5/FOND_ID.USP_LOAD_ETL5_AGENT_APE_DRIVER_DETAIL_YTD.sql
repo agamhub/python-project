@@ -1,0 +1,368 @@
+CREATE PROC [FOND_ID].[USP_LOAD_ETL5_AGENT_APE_DRIVER_DETAIL_YTD] @batch [nvarchar](30) AS
+
+BEGIN 
+--	declare @batch nvarchar(30) ='20190101'
+	DECLARE @V_START		datetime;
+	DECLARE @V_END			datetime;
+	DECLARE @V_FUNCTION_NAME	NVARCHAR(2000) = 'FOND_ID.FOND_ETL5_MIX_AGENT_APE_DRIVER_DETAIL';
+	DECLARE @V_DESCRIPTION	NVARCHAR(2000);
+	DECLARE @V_CMD			NVARCHAR(2000);
+	DECLARE @V_SEQNO			integer = 0;
+	DECLARE @V_PRD_ID		integer;
+	DECLARE @V_CREATED_DATE	datetime;
+	DECLARE @V_START_DATE	date;
+	DECLARE @V_END_DATE		date;
+	DECLARE @V_SUM_APE numeric(28,6);
+	DECLARE @V_SUM_AGENT numeric(28,6);
+	DECLARE @V_SUM_ALL numeric(28,6);
+	DECLARE @V_PERCENTAGE_APE integer = 0;
+	DECLARE @V_PERCENTAGE_AGENT integer = 0;;
+	
+
+	BEGIN TRY
+	
+
+	SET @V_START_DATE	= convert(date, cast(@batch as varchar(8))); -- valuation extract date
+	PRINT	'START DATE :' + convert(varchar,@V_START_DATE,112);
+	SET @V_START 	= convert(datetime,getDATE());
+
+	SET @V_DESCRIPTION 	= 'START ' + @V_FUNCTION_NAME + ' : ' + convert(varchar,@V_START,121);
+	PRINT	@V_DESCRIPTION;
+	SET @V_SEQNO		= @V_SEQNO + 1;
+
+
+
+	---------------------------- DROP TEMPORARY TABLE ------------------------------
+	IF OBJECT_ID('tempdb..#driver_ratio_agent_ape') IS NOT NULL
+	BEGIN
+		DROP TABLE #driver_ratio_agent_ape
+	END;
+		
+	IF OBJECT_ID('tempdb..#driver_ratio_and_allocation_agent_ape') IS NOT NULL
+	BEGIN
+		DROP TABLE #driver_ratio_and_allocation_agent_ape
+	END;
+
+	IF OBJECT_ID('tempdb..#driver_sum_table_mixed_driver_agent_ape') IS NOT NULL
+	BEGIN
+		DROP TABLE #driver_sum_table_mixed_driver_agent_ape
+	END;
+	 
+	IF OBJECT_ID('tempdb..#driver_detail_mix_agent_ape') IS NOT NULL
+	BEGIN
+		DROP TABLE #driver_detail_mix_agent_ape
+	END; 
+	
+	---------------------------- DROP TEMPORARY TABLE ------------------------------ 
+	INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+	VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+	SELECT	
+		@V_PERCENTAGE_APE = A.PERCENTAGE,
+		@V_PERCENTAGE_AGENT = B.PERCENTAGE
+	--SELECT A.PERCENTAGE,B.PERCENTAGE
+	FROM 
+		(SELECT * FROM STAG_ID.STAG_CONFIG_MIX_DRIVER_DETAIL WHERE SINGLE_DRIVER_CODE='APE' and MIX_DRIVER_CODE='AGENT_APE') A INNER JOIN 
+		(SELECT * FROM STAG_ID.STAG_CONFIG_MIX_DRIVER_DETAIL WHERE SINGLE_DRIVER_CODE='AGENT' and MIX_DRIVER_CODE='AGENT_APE') B
+		ON A.MIX_DRIVER_CODE = B.MIX_DRIVER_CODE AND A.SINGLE_DRIVER_CODE <> B.SINGLE_DRIVER_CODE
+	;
+	
+	SELECT * 
+	INTO 
+		#driver_ratio_agent_ape
+		--STAG_ID.STAG_TEMP_MIX_DRIVER 
+	FROM (
+		SELECT 
+			DRIVER_PERIOD COLLATE DATABASE_DEFAULT as DRIVER_PERIOD,
+			'AGENT_APE' +  SUBSTRING(@batch,0,5) + SUBSTRING(@batch,5,2) AS ALLOCATION_DRIVER,
+			POL_NO COLLATE DATABASE_DEFAULT as POL_NO,
+			'AGENT_APE' MIX_DRIVER_CODE,
+			'APE' SINGLE_DRIVER_CODE,
+			DRIVER_AMOUNT,
+			(DRIVER_AMOUNT * (@V_PERCENTAGE_APE * 0.01)) AS DRIVER_RATIO
+		FROM
+			(
+			SELECT 
+				DRIVER_PERIOD,POL_NO,sum(DRIVER_AMOUNT) as DRIVER_AMOUNT  
+			FROM [FOND_ID].[FOND_ETL5_APE_DRIVER_DETAIL] 
+			WHERE DRIVER_SOURCE='LifeAsia' 
+				AND DRIVER_PERIOD = YEAR(DATEADD(month, 0,CONVERT(date, @batch))) * 1000 + 0 + MONTH(DATEADD(month, 0,CONVERT(date, @batch)))
+			group by POL_NO,DRIVER_PERIOD			
+			) t1
+		UNION ALL
+		SELECT 
+			ACCOUNTING_PERIOD COLLATE DATABASE_DEFAULT as DRIVER_PERIOD,
+			'AGENT_APE' +  SUBSTRING(@batch,0,7) AS ALLOCATION_DRIVER,
+			POLICY_NO COLLATE DATABASE_DEFAULT as POL_NO,
+			'AGENT_APE' MIX_DRIVER_CODE,
+			'AGENT' SINGLE_DRIVER_CODE,
+			AGENT_FLAG as DRIVER_AMOUNT,
+			(AGENT_FLAG * (@V_PERCENTAGE_AGENT * 0.01)) AS DRIVER_RATIO
+		FROM
+			(
+			select 
+				ACCOUNTING_PERIOD,POLICY_NO,SUM(AGENT_FLAG) AS AGENT_FLAG 
+			FROM 
+				[FOND_ID].[FOND_ETL5_LIFEASIA_DRIVER_DETAIL_PER_SUM_ASSURED_NB_NOP_AGENT]
+			WHERE AGENT_FLAG='1' and
+				ACCOUNTING_PERIOD = YEAR(DATEADD(month, 0,CONVERT(date, @batch))) * 1000 + 0 + MONTH(DATEADD(month, 0,CONVERT(date, @batch)))
+			GROUP BY ACCOUNTING_PERIOD,POLICY_NO
+			) A
+    )a;
+
+
+	SELECT @V_SUM_APE = SUM(CAST(DRIVER_RATIO AS numeric(28,6))) FROM #driver_ratio_agent_ape WHERE SINGLE_DRIVER_CODE='APE';
+	SELECT @V_SUM_AGENT = SUM(CAST(DRIVER_RATIO AS numeric(28,6))) FROM #driver_ratio_agent_ape WHERE SINGLE_DRIVER_CODE='AGENT';
+	
+	
+	---------------------------- INSERT TEMPORARY TABLE DRIVER_RATIO_AND_ALLOCATION2 ------------------------------
+	SET @V_DESCRIPTION 	= 'INSERT TEMPORARY TABLE DRIVER_RATIO_AND_ALLOCATION : ' + convert(varchar,@V_START,121);
+	PRINT	@V_DESCRIPTION;
+	SET @V_SEQNO = @V_SEQNO + 1;
+	
+	INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+	VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+	
+ 	SELECT
+		*
+	INTO
+		#driver_ratio_and_allocation_agent_ape 
+	FROM (
+		SELECT a.*,COALESCE(CAST(DRIVER_RATIO AS numeric(28,6))/ NULLIF(cast(@V_SUM_APE as numeric(28,6)),0),0 ) AS WEIGHT FROM #driver_ratio_agent_ape a WHERE SINGLE_DRIVER_CODE='APE'
+		union
+		SELECT a.*,COALESCE(CAST(DRIVER_RATIO AS numeric(28,6))/ NULLIF(cast(@V_SUM_AGENT as numeric(28,6)),0),0 ) AS WEIGHT FROM #driver_ratio_agent_ape a WHERE SINGLE_DRIVER_CODE='AGENT'
+	)a; 
+
+	 
+	---------------------------- SUM TABLE MIXED DRIVER PER POLICY - RATIOTOTALPOLICY ------------------------------
+	SET @V_DESCRIPTION 	= 'SUM TABLE MIXED DRIVER PER POLICY - RATIOTOTALPOLICY: ' + convert(varchar,@V_START,121);
+	PRINT	@V_DESCRIPTION;
+	SET @V_SEQNO = @V_SEQNO + 1;
+	
+	INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+	VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+	
+	SELECT 
+		DRIVER_PERIOD,
+		ALLOCATION_DRIVER,
+		POL_NO,
+		MIX_DRIVER_CODE,
+		SUM(WEIGHT) POLICY_AMOUNT_SUM
+	INTO 
+		#driver_sum_table_mixed_driver_agent_ape 
+	FROM 
+		#driver_ratio_and_allocation_agent_ape  
+	GROUP BY 
+		DRIVER_PERIOD,
+		ALLOCATION_DRIVER,
+		POL_NO,
+		MIX_DRIVER_CODE
+	;
+	SELECT @V_SUM_ALL = SUM(POLICY_AMOUNT_SUM)	
+	FROM
+		#driver_sum_table_mixed_driver_agent_ape 
+	;
+	--select * from #driver_sum_table_mixed_driver_agent_ape
+	----------------------------  Driver Master - Regional Mapping ------------------------------
+	SET @V_DESCRIPTION 	= ' Driver Master - Regional Mapping : ' + convert(varchar,@V_START,121);
+	PRINT	@V_DESCRIPTION;
+	SET @V_SEQNO = @V_SEQNO + 1;
+	
+	INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+	VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+	
+	SELECT 
+		a.*,case when @V_SUM_ALL=0 then 0 else (CAST(b.POLICY_AMOUNT_SUM AS numeric(28,6))/CAST(@V_SUM_ALL AS numeric(28,6))) end AS DRIVER_AMOUNT 
+	INTO	
+		#driver_detail_mix_agent_ape
+	FROM (
+		SELECT 
+			DISTINCT 
+			*
+		FROM (
+--		declare @batch varchar(100)='2019011'
+			SELECT 
+				'AGENT_APE' ALLOCATION_DRIVER,
+--				SUBSTRING(DRIVER_PERIOD,0,5) DRIVER_PERIOD,
+				DRIVER_PERIOD COLLATE DATABASE_DEFAULT as DRIVER_PERIOD,
+				DRIVER_SOURCE COLLATE DATABASE_DEFAULT as DRIVER_SOURCE,
+				ENTITY_ID,
+				POL_NO COLLATE DATABASE_DEFAULT as POL_NO,			
+				BENF_CD COLLATE DATABASE_DEFAULT as BENF_CD,
+				PROD_CD COLLATE DATABASE_DEFAULT as PROD_CD,
+				FUND COLLATE DATABASE_DEFAULT as FUND
+			FROM
+				[FOND_ID].[FOND_ETL5_APE_DRIVER_DETAIL]
+			WHERE 
+				DRIVER_SOURCE='LifeAsia' 
+				AND SUBSTRING(DRIVER_PERIOD,0,5)+'0'+SUBSTRING(DRIVER_PERIOD,6,2) = SUBSTRING(@batch,0,5)+'0'+SUBSTRING(@batch,5,2)
+			UNION
+			SELECT 
+				'AGENT_APE' ALLOCATION_DRIVER,
+				SUBSTRING(ACCOUNTING_PERIOD,0,5)+'0'+SUBSTRING(ACCOUNTING_PERIOD,6,2) COLLATE DATABASE_DEFAULT as DRIVER_PERIOD,
+				'LifeAsia' COLLATE DATABASE_DEFAULT as DRIVER_SOURCE,
+				'IAI' as ENTITY_ID,
+				POLICY_NO  COLLATE DATABASE_DEFAULT as POL_NO,			
+				BENF_CD  COLLATE DATABASE_DEFAULT as BENF_CD,
+				PROD_CD  COLLATE DATABASE_DEFAULT as PROD_CD,
+				ADJ_T0 COLLATE DATABASE_DEFAULT as FUND
+			FROM
+				[FOND_ID].[FOND_ETL5_LIFEASIA_DRIVER_DETAIL_PER_SUM_ASSURED_NB_NOP_AGENT]
+			WHERE 
+				AGENT_FLAG='1' 
+				AND SUBSTRING(ACCOUNTING_PERIOD,0,5)+'0'+SUBSTRING(ACCOUNTING_PERIOD,6,2) = SUBSTRING(@batch,0,5)+'0'+SUBSTRING(@batch,5,2)
+		)a
+	)a inner join #driver_sum_table_mixed_driver_agent_ape b 
+	on a.POL_NO = b.POL_NO
+	; 
+	--select distinct benf_cd from #driver_detail_mix_nop_nb_ape
+	---------------------------- INSERT TABLE DRIVER_RATIO_AND_ALLOCATION ------------------------------
+	SET @V_DESCRIPTION 	= 'START INSERT INTO DESTINATION TABLE ' + convert(varchar,@V_START,121);
+	PRINT	@V_DESCRIPTION;
+	SET @V_SEQNO = @V_SEQNO + 1;
+	
+	INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+	VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+
+	BEGIN TRANSACTION;
+	
+	--------------------------------------------------------------------------------
+	-- SELECT SUBSTRING(DRIVER_PERIOD,0,8),* FROM FOND_ID.[FOND_ETL5_DRIVER_RATIO_AND_ALLOCATION]
+	-- SELECT SUBSTRING('20190101',0,5)+'0'+SUBSTRING('20190101',5,2)  
+	DELETE FROM FOND_ID.[FOND_ETL5_DRIVER_RATIO_AND_ALLOCATION]
+			WHERE DRIVER_PERIOD = SUBSTRING(@batch,0,5)+'0'+SUBSTRING(@batch,5,2) 
+			and MIX_DRIVER_CODE='AGENT_APE';
+	
+	INSERT INTO FOND_ID.FOND_ETL5_DRIVER_RATIO_AND_ALLOCATION
+			SELECT SUBSTRING(@batch,0,5) +'0'+ SUBSTRING(@batch,5,2) DRIVER_PERIOD
+					,ALLOCATION_DRIVER,POL_NO,MIX_DRIVER_CODE,SINGLE_DRIVER_CODE,DRIVER_AMOUNT,DRIVER_RATIO,WEIGHT 
+			FROM #driver_ratio_and_allocation_agent_ape;
+		
+	--------------------------------------------------------------------------------
+	DELETE FROM [FOND_ID].[FOND_ETL5_DRIVER_DETAIL_TOTAL_RATIO_POLICY] 
+		WHERE DRIVER_PERIOD = SUBSTRING(@batch,0,5)+'0'+SUBSTRING(@batch,5,2)
+		and MIX_DRIVER_CODE='AGENT_APE';
+	
+	INSERT INTO [FOND_ID].[FOND_ETL5_DRIVER_DETAIL_TOTAL_RATIO_POLICY] 
+			SELECT SUBSTRING(@batch,0,5) +'0'+ SUBSTRING(@batch,5,2) 
+					DRIVER_PERIOD,
+					ALLOCATION_DRIVER,
+					POL_NO,
+					MIX_DRIVER_CODE,
+					POLICY_AMOUNT_SUM 
+			FROM #driver_sum_table_mixed_driver_agent_ape;
+	
+	--------------------------------------------------------------------------------
+	DELETE FROM [FOND_ID].[FOND_ETL5_DRIVER_DETAIL_TOTAL_RATIO]
+			WHERE DRIVER_PERIOD = SUBSTRING(@batch,0,5)+'0'+SUBSTRING(@batch,5,2) 
+			and MIX_DRIVER_CODE='AGENT_APE';
+	
+	INSERT INTO [FOND_ID].[FOND_ETL5_DRIVER_DETAIL_TOTAL_RATIO] (DRIVER_PERIOD,ALLOCATION_DRIVER,MIX_DRIVER_CODE,SINGLE_DRIVER_CODE,DRIVER_AMOUNT_SUM) 
+	-- VALUES (
+	select
+	SUBSTRING(@batch,0,5) +'0'+ SUBSTRING(@batch,5,2),
+	'AGENT_APE' +  SUBSTRING(@batch,0,5) + SUBSTRING(@batch,5,2) ,
+	'AGENT_APE',
+	'APE',
+	@V_SUM_APE
+	-- );
+	;
+	INSERT INTO [FOND_ID].[FOND_ETL5_DRIVER_DETAIL_TOTAL_RATIO] (DRIVER_PERIOD,ALLOCATION_DRIVER,MIX_DRIVER_CODE,SINGLE_DRIVER_CODE,DRIVER_AMOUNT_SUM) 
+	-- VALUES (
+	select
+	SUBSTRING(@batch,0,5) +'0'+ SUBSTRING(@batch,5,2),
+	'AGENT_APE' +  SUBSTRING(@batch,0,5) + SUBSTRING(@batch,5,2) ,
+	'AGENT_APE',
+	'AGENT',
+	@V_SUM_AGENT
+	-- );
+	;
+	--------------------------------------------------------------------------------
+	DELETE FROM  [FOND_ID].[FOND_ETL5_DRIVER_DETAIL_ALL_RATIO]
+			WHERE DRIVER_PERIOD = SUBSTRING(@batch,0,5)+'0'+SUBSTRING(@batch,5,2)
+			and MIX_DRIVER_CODE='AGENT_APE';
+	
+	INSERT INTO [FOND_ID].[FOND_ETL5_DRIVER_DETAIL_ALL_RATIO] (DRIVER_PERIOD,ALLOCATION_DRIVER,MIX_DRIVER_CODE,POLICY_AMOUNT_SUM) 
+	-- VALUES (
+	select
+	SUBSTRING(@batch,0,5) +'0'+ SUBSTRING(@batch,5,2),
+	'AGENT_APE' +  SUBSTRING(@batch,0,5) + SUBSTRING(@batch,5,2) ,
+	'AGENT_APE',
+	@V_SUM_ALL
+	-- );
+	;
+ 	--------------------------------------------------------------------------------
+ 	DELETE FROM  [FOND_ID].[FOND_ETL5_DRIVER_DETAIL_MIX]
+			WHERE DRIVER_PERIOD = SUBSTRING(@batch,0,5)+'0'+SUBSTRING(@batch,5,2) 
+			and ALLOCATION_DRIVER='AGENT_APE';
+		
+	INSERT INTO [FOND_ID].[FOND_ETL5_DRIVER_DETAIL_MIX]
+			SELECT ALLOCATION_DRIVER,
+				SUBSTRING(DRIVER_PERIOD,0,5) +'0'+ SUBSTRING(@batch,5,2)
+				DRIVER_PERIOD,
+				DRIVER_SOURCE,
+				ENTITY_ID,
+				POL_NO,			
+				BENF_CD,
+				PROD_CD,
+				FUND,
+				DRIVER_AMOUNT,
+				'0' BATCH_MASTER_ID,
+				'0' BATCH_RUN_ID,
+				'0' JOB_MASTER_ID,
+				'0' JOB_RUN_ID,
+				left(replace(@batch,'-',''),6) as BATCHDATE,
+				GETDATE() as ETL_PROCESS_DATE_TIME
+			FROM #driver_detail_mix_agent_ape; 
+			
+ 	IF @@TRANCOUNT > 0
+		COMMIT;
+				
+	
+	---------------------------- DROP TERMPORARY TABLE ------------------------------  
+	SET @V_DESCRIPTION 	= 'DROP TEMPORARY TABLE ' + convert(varchar,@V_START,121);
+	PRINT	@V_DESCRIPTION;
+	SET @V_SEQNO = @V_SEQNO + 1;
+	
+	INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+	VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+	
+	IF OBJECT_ID('tempdb..#driver_ratio_agent_ape') IS NOT NULL
+	BEGIN
+		DROP TABLE #driver_ratio_agent_ape
+	END;
+		
+	IF OBJECT_ID('tempdb..#driver_ratio_and_allocation_agent_ape') IS NOT NULL
+	BEGIN
+		DROP TABLE #driver_ratio_and_allocation_agent_ape
+	END;
+	
+	IF OBJECT_ID('tempdb..#driver_sum_table_mixed_driver_agent_ape') IS NOT NULL
+	BEGIN
+		DROP TABLE #driver_sum_table_mixed_driver_agent_ape
+	END;
+ 	
+	IF OBJECT_ID('tempdb..#driver_detail_mix_agent_ape') IS NOT NULL
+	BEGIN
+		DROP TABLE #driver_detail_mix_agent_ape
+	END;
+	
+	
+	END TRY
+
+	BEGIN CATCH
+ 		IF @@TRANCOUNT > 0
+                ROLLBACK;
+	    SET @V_SEQNO 	= @V_SEQNO + 1;
+		SET @V_START 	= convert(datetime,getDATE());
+		SET @V_END 	= convert(datetime,getDATE());
+		SET @V_DESCRIPTION	='Error execution for function on ' 
+							+ @V_FUNCTION_NAME + ' at ' + convert(varchar,@V_START,121) 
+							+ ' with Error Message : ' + ERROR_MESSAGE();
+		PRINT @V_DESCRIPTION;		
+		
+		INSERT into FOND_ID.FOND_IFRS17_PROC_LOG(PROC_DATE,FUNC_NAME,SEQNO,DESCRIPTION)
+		VALUES (@V_START,@V_FUNCTION_NAME,@V_SEQNO,@V_DESCRIPTION);
+		raiserror(@V_DESCRIPTION, 18, 1)
+	END CATCH
+END;
+
